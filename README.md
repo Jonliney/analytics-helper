@@ -225,10 +225,33 @@ Unknown event names and missing required properties always fail TypeScript
 checking. Invalid enum values and extra properties also fail unless that particular
 property or event has explicitly enabled the controlled flexibility flags above.
 The same contract is enforced at runtime before the PostHog adapter is called.
+By default, invalid events throw, which makes mistakes immediately visible in
+development and tests.
+
+Applications that must not interrupt a production user flow can explicitly report
+and drop invalid events:
+
+```ts
+export const track = createTracker(
+  (event, properties) => posthog.capture(event, properties),
+  {
+    onInvalid({ event, properties, error }) {
+      reportAnalyticsError(error, { event, properties });
+      // Returning without calling PostHog drops the invalid event.
+    },
+  },
+);
+```
+
+`onInvalid` only handles catalog validation failures. The capture adapter is not
+called for an invalid event, while errors thrown by PostHog still propagate to the
+caller. The handler's return type is included in the return type of `track`; avoid
+logging raw properties unless they meet the application's privacy requirements.
 
 For validation without capture, use `parseEvent(name, value)`. The package also
 exports `eventSchemas`, `eventDefinitions`, `AnalyticsEventName`,
-`AnalyticsEvents`, and the discriminated `AnalyticsEvent` union.
+`AnalyticsEvents`, `AnalyticsValidationFailure`, `TrackerOptions`, and the
+discriminated `AnalyticsEvent` union.
 
 ## Java consumer
 
@@ -260,7 +283,7 @@ The package has three deliberate seams:
 | `loadEventCatalog(rootDirectory)`      | Recursive discovery, JSON parsing, schema validation, duplicate detection, sorting, provenance, and normalization of default values. Renderers receive only the normalized events. |
 | `compareCatalogs(previous, current)`   | Event/property matching, enum-set comparison, compatibility classification, and calculation of the minimum semantic version bump.                                                   |
 | `buildAnalyticsProject(rootDirectory)` | The output registry, language renderers, output locations, and write ordering. Every target is rendered before any artifact is written.                                            |
-| `createTracker(capture)`               | Event lookup, compile-time property matching, runtime Zod validation, and forwarding to the injected analytics adapter.                                                            |
+| `createTracker(capture, options?)`     | Event lookup, compile-time property matching, runtime Zod validation, invalid-event policy, and forwarding to the injected analytics adapter.                                      |
 
 File and folder layout is authoring provenance, not part of the generated contract.
 If a future language target needs product-area grouping, add explicit event metadata

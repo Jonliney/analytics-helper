@@ -1,4 +1,7 @@
-import { createTracker } from "../src/index.js";
+import {
+  createTracker,
+  type AnalyticsValidationFailure,
+} from "../src/index.js";
 
 const track = createTracker(() => undefined);
 
@@ -27,3 +30,31 @@ const propertiesWithAnExtraKey = {
 
 // @ts-expect-error Variables with undeclared keys are rejected too.
 track("Signup Completed", propertiesWithAnExtraKey);
+
+const strictResultTracker = createTracker(() => "captured" as const);
+const strictResult: "captured" = strictResultTracker("Signup Completed", {
+  method: "email",
+});
+void strictResult;
+
+const resilientTracker = createTracker(
+  () => "captured" as const,
+  {
+    onInvalid(failure) {
+      const typedFailure: AnalyticsValidationFailure = failure;
+      const event: string = failure.event;
+      const properties: unknown = failure.properties;
+      const error: Error = failure.error;
+      void typedFailure;
+      void event;
+      void properties;
+      void error;
+      return "dropped" as const;
+    },
+  },
+);
+const resilientResult: "captured" | "dropped" = resilientTracker(
+  "Signup Completed",
+  { method: "google" },
+);
+void resilientResult;

@@ -2,7 +2,9 @@ export {
   createTracker,
   isAnalyticsEventName,
   parseEvent,
+  type AnalyticsValidationFailure,
   type CaptureFunction,
+  type TrackerOptions,
 } from "./tracker.js";
 
 export {
