@@ -150,6 +150,33 @@ To make a change:
 tests. The GitHub workflow runs this command for pull requests and `main` pushes,
 then fails if the committed generated artifacts differ from a clean build.
 
+## Compatibility checks
+
+Compare the working event definitions with a Git ref containing a previously
+generated catalog:
+
+```sh
+pnpm compatibility --base-ref main
+pnpm compatibility --base-ref v1.2.3 --bump minor
+```
+
+The comparison reports every contract change and the minimum semantic version
+bump:
+
+- `major`: an existing tracking call can stop compiling or fail validation;
+- `minor`: events or accepted values are added, or validation is relaxed;
+- `patch`: descriptions, ownership, or recommended open-enum values change;
+- `none`: the contracts are equivalent, including when only ordering changes.
+
+Pull-request CI writes the comparison against the exact base commit to the GitHub
+Actions summary. The publishing workflow compares against the tag matching the
+current package version and rejects an insufficient selected bump. If no prior
+tagged catalog exists, the first release establishes the compatibility baseline.
+
+These rules describe the TypeScript tracking interface and runtime contract. The
+generated Java demonstration is not yet a published compatibility surface; define
+and enforce its source-compatibility policy when it becomes a Maven artifact.
+
 ## Publishing a release
 
 The `Publish analytics package` workflow is manually available under GitHub
@@ -231,6 +258,7 @@ The package has three deliberate seams:
 | Module interface                       | What its implementation hides                                                                                                                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `loadEventCatalog(rootDirectory)`      | Recursive discovery, JSON parsing, schema validation, duplicate detection, sorting, provenance, and normalization of default values. Renderers receive only the normalized events. |
+| `compareCatalogs(previous, current)`   | Event/property matching, enum-set comparison, compatibility classification, and calculation of the minimum semantic version bump.                                                   |
 | `buildAnalyticsProject(rootDirectory)` | The output registry, language renderers, output locations, and write ordering. Every target is rendered before any artifact is written.                                            |
 | `createTracker(capture)`               | Event lookup, compile-time property matching, runtime Zod validation, and forwarding to the injected analytics adapter.                                                            |
 

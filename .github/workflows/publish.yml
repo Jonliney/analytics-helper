@@ -72,11 +72,43 @@ jobs:
         run: |
           node -e "const p = require('./package.json'); if (!p.name.startsWith('@') || p.name.startsWith('@company/')) throw new Error('Replace the placeholder package name with the real company npm scope.'); if (!p.repository?.url) throw new Error('Set package.json repository.url before publishing with npm trusted publishing.')"
 
+      - name: Locate previous release catalog
+        id: previous
+        run: |
+          current_version="$(node -p 'require("./package.json").version')"
+          base_ref="v${current_version}"
+          if git rev-parse --verify --quiet "refs/tags/${base_ref}" >/dev/null && git cat-file -e "${base_ref}:generated/analytics-catalog.json" 2>/dev/null; then
+            echo "ref=${base_ref}" >> "$GITHUB_OUTPUT"
+          else
+            latest_tag="$(git tag --list --sort=-v:refname 'v*' | head -n 1)"
+            if [ -n "$latest_tag" ]; then
+              echo "Expected ${base_ref} with a generated analytics catalog, but the latest release tag is ${latest_tag}." >&2
+              exit 1
+            fi
+          fi
+
       - name: Increment package version
         run: npm version "${{ inputs.version_bump }}" --no-git-tag-version
 
       - name: Validate, build, and test
         run: pnpm run ci
+
+      - name: Verify selected version bump
+        if: steps.previous.outputs.ref != ''
+        env:
+          BASE_REF: ${{ steps.previous.outputs.ref }}
+          SELECTED_BUMP: ${{ inputs.version_bump }}
+        run: >-
+          node --import tsx check-analytics-compatibility.ts
+          --base-ref "$BASE_REF" --bump "$SELECTED_BUMP"
+          --format markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Note initial compatibility baseline
+        if: steps.previous.outputs.ref == ''
+        run: |
+          echo "## Analytics contract compatibility" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "No prior release catalog was found; this release establishes the baseline." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Compile generated Java contract
         run: >-
