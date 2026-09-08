@@ -12,7 +12,6 @@
     "src/**/*.ts",
     "tooling/**/*.ts",
     "tests/**/*.ts",
-    "benchmarks/**/*.ts",
     "*.ts"
   ]
 }
