@@ -1,6 +1,5 @@
 import type {
   EventDefinition,
-  LoadedEventDefinition,
   PropertyDefinition,
 } from "./event-catalog.js";
 
@@ -50,24 +49,24 @@ function commentLines(value: string): string {
 }
 
 export function renderTypeScriptCatalog(
-  events: LoadedEventDefinition[],
+  events: readonly EventDefinition[],
 ): string {
   const schemas = events
     .map(
-      ({ definition }) => `  /**
-${commentLines(definition.description)}
-   * Owner: ${definition.owner.replaceAll("*/", "*\\/")}
+      (event) => `  /**
+${commentLines(event.description)}
+   * Owner: ${event.owner.replaceAll("*/", "*\\/")}
    */
-  ${JSON.stringify(definition.name)}: ${eventToZod(definition)},`,
+  ${JSON.stringify(event.name)}: ${eventToZod(event)},`,
     )
     .join("\n");
 
   const definitions = events
     .map(
-      ({ definition }) =>
-        `  ${JSON.stringify(definition.name)}: {
-    description: ${JSON.stringify(definition.description)},
-    owner: ${JSON.stringify(definition.owner)},
+      (event) =>
+        `  ${JSON.stringify(event.name)}: {
+    description: ${JSON.stringify(event.description)},
+    owner: ${JSON.stringify(event.owner)},
   },`,
     )
     .join("\n");
@@ -101,12 +100,12 @@ export type AnalyticsEvent = {
 }
 
 export function renderLanguageNeutralCatalog(
-  events: LoadedEventDefinition[],
+  events: readonly EventDefinition[],
 ): string {
   return `${JSON.stringify(
     {
       schemaVersion: 1,
-      events: events.map(({ definition }) => definition),
+      events,
     },
     null,
     2,

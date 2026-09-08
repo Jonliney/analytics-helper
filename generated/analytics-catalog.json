@@ -5,20 +5,24 @@
       "name": "Signup Completed",
       "description": "User completes account registration",
       "owner": "product",
+      "allowAdditionalProperties": false,
       "properties": {
         "method": {
           "type": "string",
           "description": "Authentication method used for registration",
+          "optional": false,
           "enum": [
             "email",
             "google",
             "apple"
-          ]
+          ],
+          "allowOtherValues": false
         },
         "campaign_id": {
           "type": "string",
           "description": "Acquisition campaign identifier, when available",
-          "optional": true
+          "optional": true,
+          "allowOtherValues": false
         }
       }
     },
@@ -31,6 +35,7 @@
         "method": {
           "type": "string",
           "description": "Authentication method selected for registration",
+          "optional": false,
           "enum": [
             "email",
             "google",

@@ -147,7 +147,8 @@ To make a change:
    version appropriate for the compatibility impact.
 
 `pnpm run ci` performs validation, generation, compilation, type-checking, and
-tests. The GitHub workflow runs this command for pull requests and `main` pushes.
+tests. The GitHub workflow runs this command for pull requests and `main` pushes,
+then fails if the committed generated artifacts differ from a clean build.
 
 ## Publishing a release
 
@@ -223,12 +224,31 @@ change rather than an unvalidated escape hatch. Update the JSON Schema, the type
 in `tooling/event-catalog.ts`, the TypeScript renderer, every native renderer, and
 their tests. This keeps every generated language contract aligned.
 
+## Maintainer architecture
+
+The package has three deliberate seams:
+
+| Module interface | What its implementation hides |
+| --- | --- |
+| `loadEventCatalog(rootDirectory)` | Recursive discovery, JSON parsing, schema validation, duplicate detection, sorting, provenance, and normalization of default values. Renderers receive only the normalized events. |
+| `buildAnalyticsProject(rootDirectory)` | The output registry, language renderers, output locations, and write ordering. Every target is rendered before any artifact is written. |
+| `createTracker(capture)` | Event lookup, compile-time property matching, runtime Zod validation, and forwarding to the injected analytics adapter. |
+
+File and folder layout is authoring provenance, not part of the generated contract.
+If a future language target needs product-area grouping, add explicit event metadata
+rather than deriving semantic behavior from paths.
+
+To add a language, implement one renderer over the normalized `EventDefinition[]`
+and register its output in `tooling/build-project.ts`. It should not read files or
+reimplement schema defaults.
+
 ## Performance
 
 Validation compiles the JSON Schema once per command, then validates each file in
 one pass. Generation sorts events once and renders each target linearly. Use
 `pnpm benchmark` to exercise 300 events across 300 separate files—the deliberately
-less efficient layout—when changing validation or generation code.
+less efficient layout—when changing validation or generation code. Set
+`ANALYTICS_BENCHMARK_EVENTS` to compare larger catalogs.
 
 The main scaling consideration is consumer bundle size rather than repository
 generation time: importing the runtime tracker initializes every Zod schema. At a

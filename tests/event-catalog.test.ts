@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -8,37 +7,10 @@ import {
   CatalogValidationError,
   loadEventCatalog,
 } from "../tooling/event-catalog.js";
+import { createCatalogFixture, validEvent } from "./catalog-fixture.js";
 
-const repositoryRoot = path.resolve(import.meta.dirname, "..");
-
-function createFixture(eventFiles: Record<string, unknown>): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "analytics-catalog-"));
-  fs.cpSync(
-    path.join(repositoryRoot, "event-definition.schema.json"),
-    path.join(root, "event-definition.schema.json"),
-  );
-
-  for (const [relativePath, value] of Object.entries(eventFiles)) {
-    const file = path.join(root, "events", relativePath);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(value));
-  }
-
-  return root;
-}
-
-const validEvent = {
-  name: "Signup Completed",
-  description: "A user signs up",
-  owner: "growth",
-  properties: {
-    method: { type: "string", enum: ["email", "google"] },
-    campaign_id: { type: "string", optional: true },
-  },
-};
-
-test("loads and sorts valid definitions from nested folders", () => {
-  const root = createFixture({
+test("loads and sorts valid definitions from nested folders", (t) => {
+  const root = createCatalogFixture(t, {
     "auth/signup.json": validEvent,
     "billing/payment.json": {
       ...validEvent,
@@ -49,13 +21,23 @@ test("loads and sorts valid definitions from nested folders", () => {
   const result = loadEventCatalog(root);
 
   assert.deepEqual(
-    result.events.map(({ definition }) => definition.name),
+    result.events.map(({ name }) => name),
     ["Payment Completed", "Signup Completed"],
   );
+  assert.deepEqual(result.sources, [
+    "events/auth/signup.json",
+    "events/billing/payment.json",
+  ]);
+
+  const signup = result.events.find(({ name }) => name === "Signup Completed")!;
+  assert.equal(signup.allowAdditionalProperties, false);
+  assert.equal(signup.properties.method!.optional, false);
+  assert.equal(signup.properties.method!.allowOtherValues, false);
+  assert.equal(signup.properties.campaign_id!.optional, true);
 });
 
-test("loads multiple events from one product-area file", () => {
-  const root = createFixture({
+test("loads multiple events from one product-area file", (t) => {
+  const root = createCatalogFixture(t, {
     "auth/auth.json": [
       { ...validEvent, name: "Signup Started", properties: {} },
       validEvent,
@@ -65,17 +47,14 @@ test("loads multiple events from one product-area file", () => {
   const result = loadEventCatalog(root);
 
   assert.deepEqual(
-    result.events.map(({ definition }) => definition.name),
+    result.events.map(({ name }) => name),
     ["Signup Completed", "Signup Started"],
   );
-  assert.deepEqual(
-    result.events.map(({ source }) => source),
-    ["events/auth/auth.json", "events/auth/auth.json"],
-  );
+  assert.deepEqual(result.sources, ["events/auth/auth.json"]);
 });
 
-test("reports invalid definitions and duplicate event names together", () => {
-  const root = createFixture({
+test("reports invalid definitions and duplicate event names together", (t) => {
+  const root = createCatalogFixture(t, {
     "auth/first.json": validEvent,
     "auth/second.json": validEvent,
     "broken.json": {
@@ -97,8 +76,8 @@ test("reports invalid definitions and duplicate event names together", () => {
   );
 });
 
-test("reports malformed JSON with its source file", () => {
-  const root = createFixture({ "auth/signup.json": validEvent });
+test("reports malformed JSON with its source file", (t) => {
+  const root = createCatalogFixture(t, { "auth/signup.json": validEvent });
   const malformedFile = path.join(root, "events", "auth", "malformed.json");
   fs.writeFileSync(malformedFile, "{ not-json }");
 

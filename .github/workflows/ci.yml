@@ -24,4 +24,8 @@ jobs:
           java-version: 21
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ci
-      - run: javac --release 17 generated/java/com/company/analytics/AnalyticsEvents.java
+      - name: Ensure generated artifacts are committed
+        run: git diff --exit-code -- src/generated generated dist
+      - run: >-
+          javac --release 17 -d "$RUNNER_TEMP/java-classes"
+          generated/java/com/company/analytics/AnalyticsEvents.java

@@ -79,7 +79,9 @@ jobs:
         run: pnpm run ci
 
       - name: Compile generated Java contract
-        run: javac --release 17 generated/java/com/company/analytics/AnalyticsEvents.java
+        run: >-
+          javac --release 17 -d "$RUNNER_TEMP/java-classes"
+          generated/java/com/company/analytics/AnalyticsEvents.java
 
       - name: Read release version
         id: package

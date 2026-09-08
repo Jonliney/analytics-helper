@@ -10,7 +10,14 @@ import {
 } from "../tooling/generate-catalog.js";
 import { renderJavaCatalog } from "../tooling/generate-java.js";
 
-const eventCount = 300;
+const eventCount = Number.parseInt(
+  process.env.ANALYTICS_BENCHMARK_EVENTS ?? "300",
+  10,
+);
+
+if (!Number.isSafeInteger(eventCount) || eventCount < 1) {
+  throw new Error("ANALYTICS_BENCHMARK_EVENTS must be a positive integer");
+}
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const fixtureRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "analytics-benchmark-"),
@@ -54,9 +61,9 @@ try {
   console.log(`${eventCount} events across ${eventCount} files`);
   console.log(`Validation: ${validationMs.toFixed(1)} ms`);
   console.log(`Generation: ${generationMs.toFixed(1)} ms`);
-  console.log(
-    `Output: ${((typescript.length + java.length + json.length) / 1024).toFixed(1)} KiB`,
-  );
+  console.log(`TypeScript: ${(typescript.length / 1024).toFixed(1)} KiB`);
+  console.log(`Java: ${(java.length / 1024).toFixed(1)} KiB`);
+  console.log(`Catalog JSON: ${(json.length / 1024).toFixed(1)} KiB`);
 } finally {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
 }

@@ -3,38 +3,61 @@ import path from "node:path";
 
 import { Ajv, type AnySchema, type ErrorObject } from "ajv";
 
-export type PropertyDefinition = {
+export type PropertyDefinition = Readonly<{
   type: "string" | "number" | "boolean";
   description?: string;
-  optional?: boolean;
-  enum?: string[];
-  allowOtherValues?: boolean;
-};
+  optional: boolean;
+  enum?: readonly string[];
+  allowOtherValues: boolean;
+}>;
 
-export type EventDefinition = {
+export type EventDefinition = Readonly<{
   name: string;
   description: string;
   owner: string;
-  allowAdditionalProperties?: boolean;
-  properties: Record<string, PropertyDefinition>;
+  allowAdditionalProperties: boolean;
+  properties: Readonly<Record<string, PropertyDefinition>>;
+}>;
+
+type AuthoredPropertyDefinition = Omit<
+  PropertyDefinition,
+  "optional" | "allowOtherValues"
+> & {
+  optional?: boolean;
+  allowOtherValues?: boolean;
 };
 
-type EventDefinitionFile = EventDefinition | EventDefinition[];
+type AuthoredEventDefinition = Omit<
+  EventDefinition,
+  "allowAdditionalProperties" | "properties"
+> & {
+  allowAdditionalProperties?: boolean;
+  properties: Record<string, AuthoredPropertyDefinition>;
+};
 
-export type LoadedEventDefinition = {
+type EventDefinitionFile =
+  | AuthoredEventDefinition
+  | AuthoredEventDefinition[];
+
+type LocatedEventDefinition = {
   definition: EventDefinition;
   source: string;
 };
 
-export type EventCatalog = {
-  events: LoadedEventDefinition[];
-};
+export type EventCatalog = Readonly<{
+  events: readonly EventDefinition[];
+  sources: readonly string[];
+}>;
 
 export class CatalogValidationError extends Error {
-  readonly issues: string[];
+  readonly issues: readonly string[];
 
-  constructor(issues: string[]) {
-    super(`Analytics validation failed:\n${issues.map((issue) => `  - ${issue}`).join("\n")}`);
+  constructor(issues: readonly string[]) {
+    super(
+      `Analytics validation failed:\n${issues
+        .map((issue) => `  - ${issue}`)
+        .join("\n")}`,
+    );
     this.name = "CatalogValidationError";
     this.issues = issues;
   }
@@ -64,6 +87,31 @@ function formatSchemaError(error: ErrorObject): string {
     : "";
 
   return `${location} ${error.message ?? "is invalid"}${details}`;
+}
+
+function normalizeEventDefinition(
+  event: AuthoredEventDefinition,
+): EventDefinition {
+  return {
+    name: event.name,
+    description: event.description,
+    owner: event.owner,
+    allowAdditionalProperties: event.allowAdditionalProperties ?? false,
+    properties: Object.fromEntries(
+      Object.entries(event.properties).map(([name, property]) => [
+        name,
+        {
+          type: property.type,
+          ...(property.description === undefined
+            ? {}
+            : { description: property.description }),
+          optional: property.optional ?? false,
+          ...(property.enum === undefined ? {} : { enum: property.enum }),
+          allowOtherValues: property.allowOtherValues ?? false,
+        },
+      ]),
+    ),
+  };
 }
 
 export function loadEventCatalog(rootDirectory: string): EventCatalog {
@@ -99,7 +147,7 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     issues.push("events/: no event definition JSON files were found");
   }
 
-  const events: LoadedEventDefinition[] = [];
+  const locatedEvents: LocatedEventDefinition[] = [];
 
   for (const file of files) {
     const source = path.relative(rootDirectory, file);
@@ -131,13 +179,16 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     const definitions = Array.isArray(value) ? value : [value];
 
     for (const definition of definitions) {
-      events.push({ definition, source });
+      locatedEvents.push({
+        definition: normalizeEventDefinition(definition),
+        source,
+      });
     }
   }
 
   const sourcesByName = new Map<string, string[]>();
 
-  for (const event of events) {
+  for (const event of locatedEvents) {
     const sources = sourcesByName.get(event.definition.name) ?? [];
     sources.push(event.source);
     sourcesByName.set(event.definition.name, sources);
@@ -167,9 +218,10 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     throw new CatalogValidationError(issues);
   }
 
-  events.sort((left, right) =>
-    left.definition.name.localeCompare(right.definition.name),
-  );
+  const events = locatedEvents
+    .map(({ definition }) => definition)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const sources = [...new Set(locatedEvents.map(({ source }) => source))];
 
-  return { events };
+  return { events, sources };
 }
