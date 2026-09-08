@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "events": [
+    {
+      "name": "Signup Completed",
+      "description": "User completes account registration",
+      "owner": "product",
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Authentication method used for registration",
+          "enum": [
+            "email",
+            "google",
+            "apple"
+          ]
+        },
+        "campaign_id": {
+          "type": "string",
+          "description": "Acquisition campaign identifier, when available",
+          "optional": true
+        }
+      }
+    }
+  ]
+}

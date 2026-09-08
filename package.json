@@ -1,25 +1,36 @@
 {
   "name": "data-system",
   "version": "1.0.0",
-  "description": "",
+  "description": "Generated, runtime-validated analytics event contracts",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./catalog.json": "./generated/analytics-catalog.json",
+    "./event-definition.schema.json": "./event-definition.schema.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "generated/analytics-catalog.json",
+    "event-definition.schema.json"
   ],
   "scripts": {
-    "validate": "tsx validate-analytics.ts",
-    "generate": "tsx build-analytics.ts",
-    "build": "pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",
-    "ci": "pnpm run build",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "validate": "node --import tsx validate-analytics.ts",
+    "generate": "node --import tsx build-analytics.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "build": "pnpm run clean && pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",
+    "ci": "pnpm run build && pnpm run typecheck && pnpm run test",
     "prepublishOnly": "pnpm run build"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "zod": "^4.5.4"

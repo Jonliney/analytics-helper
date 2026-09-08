@@ -3,9 +3,10 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
     "types": ["node"],
     "strict": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "*.ts"]
+  "include": ["src/**/*.ts", "tooling/**/*.ts", "tests/**/*.ts", "*.ts"]
 }

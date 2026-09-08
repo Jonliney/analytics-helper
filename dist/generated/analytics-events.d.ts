@@ -1,29 +1,32 @@
 import { z } from "zod";
-/**
- * User completes account registration
- * Owner: product
- */
-export declare const SignupCompletedSchema: z.ZodObject<{
-    method: z.ZodOptional<z.ZodEnum<{
-        apple: "apple";
-        email: "email";
-        google: "google";
-    }>>;
-    campaign_id: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
-export type SignupCompleted = z.infer<typeof SignupCompletedSchema>;
 export declare const eventSchemas: {
-    readonly signup_completed: z.ZodObject<{
-        method: z.ZodOptional<z.ZodEnum<{
+    /**
+     * User completes account registration
+     * Owner: product
+     */
+    readonly "Signup Completed": z.ZodObject<{
+        method: z.ZodEnum<{
             apple: "apple";
             email: "email";
             google: "google";
-        }>>;
+        }>;
         campaign_id: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
+    }, z.core.$strict>;
+};
+export declare const eventDefinitions: {
+    readonly "Signup Completed": {
+        readonly description: "User completes account registration";
+        readonly owner: "product";
+    };
 };
 export type AnalyticsEventName = keyof typeof eventSchemas;
 export type AnalyticsEvents = {
-    "signup_completed": SignupCompleted;
+    [Name in AnalyticsEventName]: z.infer<(typeof eventSchemas)[Name]>;
 };
+export type AnalyticsEvent = {
+    [Name in AnalyticsEventName]: {
+        name: Name;
+        properties: AnalyticsEvents[Name];
+    };
+}[AnalyticsEventName];
 //# sourceMappingURL=analytics-events.d.ts.map

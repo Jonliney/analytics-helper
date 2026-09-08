@@ -1,42 +1,93 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "required": ["name", "description", "owner", "properties"],
-  "properties": {
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*$"
+  "$id": "https://company.example/schemas/analytics-event-definition.schema.json",
+  "title": "Analytics event definition file",
+  "description": "A file may contain one event definition or an array of event definitions.",
+  "oneOf": [
+    { "$ref": "#/definitions/eventDefinition" },
+    {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/eventDefinition" }
+    }
+  ],
+  "definitions": {
+    "eventDefinition": {
+      "type": "object",
+      "required": ["name", "description", "owner", "properties"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
+          "pattern": "^[A-Z][A-Za-z0-9]*(?: [A-Z][A-Za-z0-9]*)*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "description": "Team responsible for the event definition.",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "properties": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "oneOf": [
+              { "$ref": "#/definitions/stringProperty" },
+              { "$ref": "#/definitions/numberProperty" },
+              { "$ref": "#/definitions/booleanProperty" }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
     },
-    "description": {
+    "propertyDescription": {
       "type": "string",
       "minLength": 1
     },
-    "owner": {
-      "type": "string",
-      "enum": ["product", "data"]
+    "propertyOptional": {
+      "type": "boolean"
     },
-    "properties": {
+    "stringProperty": {
       "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "required": ["type"],
-        "properties": {
-          "type": {
-            "enum": ["string", "number", "boolean"]
-          },
-          "optional": {
-            "type": "boolean"
-          },
-          "enum": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
-      }
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "string" },
+        "description": { "$ref": "#/definitions/propertyDescription" },
+        "optional": { "$ref": "#/definitions/propertyOptional" },
+        "enum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "numberProperty": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "number" },
+        "description": { "$ref": "#/definitions/propertyDescription" },
+        "optional": { "$ref": "#/definitions/propertyOptional" }
+      },
+      "additionalProperties": false
+    },
+    "booleanProperty": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "boolean" },
+        "description": { "$ref": "#/definitions/propertyDescription" },
+        "optional": { "$ref": "#/definitions/propertyOptional" }
+      },
+      "additionalProperties": false
     }
-  },
-  "additionalProperties": false
+  }
 }

@@ -1,25 +1,35 @@
 // AUTO-GENERATED FILE.
-// DO NOT EDIT MANUALLY.
+// DO NOT EDIT MANUALLY. Edit events/**/*.json and run pnpm generate.
 
-import { z } from "zod"
-
-/**
- * User completes account registration
- * Owner: product
- */
-export const SignupCompletedSchema = z.object({
-  "method": z.enum(["email", "google", "apple"]).optional(),
-  "campaign_id": z.string().optional(),
-})
-
-export type SignupCompleted = z.infer<typeof SignupCompletedSchema>
+import { z } from "zod";
 
 export const eventSchemas = {
-  "signup_completed": SignupCompletedSchema,
-} as const
+  /**
+   * User completes account registration
+   * Owner: product
+   */
+  "Signup Completed": z.strictObject({
+    "method": z.enum(["email", "google", "apple"]).describe("Authentication method used for registration"),
+    "campaign_id": z.string().optional().describe("Acquisition campaign identifier, when available"),
+  }),
+} as const;
 
-export type AnalyticsEventName = keyof typeof eventSchemas
+export const eventDefinitions = {
+  "Signup Completed": {
+    description: "User completes account registration",
+    owner: "product",
+  },
+} as const;
+
+export type AnalyticsEventName = keyof typeof eventSchemas;
 
 export type AnalyticsEvents = {
-  "signup_completed": SignupCompleted
-}
+  [Name in AnalyticsEventName]: z.infer<(typeof eventSchemas)[Name]>;
+};
+
+export type AnalyticsEvent = {
+  [Name in AnalyticsEventName]: {
+    name: Name;
+    properties: AnalyticsEvents[Name];
+  };
+}[AnalyticsEventName];
