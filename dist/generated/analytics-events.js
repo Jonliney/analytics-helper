@@ -10,10 +10,21 @@ export const eventSchemas = {
         "method": z.enum(["email", "google", "apple"]).describe("Authentication method used for registration"),
         "campaign_id": z.string().optional().describe("Acquisition campaign identifier, when available"),
     }),
+    /**
+     * User begins account registration
+     * Owner: product
+     */
+    "Signup Started": z.object({
+        "method": z.string().describe("Authentication method selected for registration"),
+    }).catchall(z.unknown()),
 };
 export const eventDefinitions = {
     "Signup Completed": {
         description: "User completes account registration",
+        owner: "product",
+    },
+    "Signup Started": {
+        description: "User begins account registration",
         owner: "product",
     },
 };

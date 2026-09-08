@@ -12,10 +12,21 @@ export declare const eventSchemas: {
         }>;
         campaign_id: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>;
+    /**
+     * User begins account registration
+     * Owner: product
+     */
+    readonly "Signup Started": z.ZodObject<{
+        method: z.ZodString;
+    }, z.core.$catchall<z.ZodUnknown>>;
 };
 export declare const eventDefinitions: {
     readonly "Signup Completed": {
         readonly description: "User completes account registration";
+        readonly owner: "product";
+    };
+    readonly "Signup Started": {
+        readonly description: "User begins account registration";
         readonly owner: "product";
     };
 };

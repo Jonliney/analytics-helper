@@ -103,6 +103,34 @@ Supported types are `string`, `number`, and `boolean`. String properties can hav
 a non-empty `enum`. Properties are required by default; add `"optional": true`
 only when callers legitimately may not have the value.
 
+### Controlled flexibility
+
+Strict contracts are the default because they catch misspelled properties and
+unexpected enum values close to the call site. Events that genuinely need temporary
+or experiment-specific properties can opt in explicitly:
+
+```json
+{
+  "name": "Signup Started",
+  "description": "A user begins account registration",
+  "owner": "growth",
+  "allowAdditionalProperties": true,
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": ["email", "google", "apple"],
+      "allowOtherValues": true
+    }
+  }
+}
+```
+
+`allowAdditionalProperties` permits undeclared keys but still requires every
+declared required property. `allowOtherValues` changes a string enum from an
+exhaustive list into a documented list of recommended values; its generated type
+becomes `string`. Keep both flags off unless the event has a concrete need for an
+open contract.
+
 Contract changes affect every consumer:
 
 - Adding an optional property is backwards-compatible.
@@ -120,6 +148,31 @@ To make a change:
 
 `pnpm run ci` performs validation, generation, compilation, type-checking, and
 tests. The GitHub workflow runs this command for pull requests and `main` pushes.
+
+## Publishing a release
+
+The `Publish analytics package` workflow is manually available under GitHub
+Actions. It offers three choices:
+
+- version increment: `patch`, `minor`, or `major`;
+- npm tag: `latest` or `next`;
+- visibility: `restricted` or `public`.
+
+The workflow validates and builds every output, compiles the generated Java,
+increments the package version, commits and tags it, publishes it to npm, and
+creates a GitHub release containing the language-neutral catalog and Java source.
+
+Before its first use:
+
+1. Replace `data-system` with the real scoped package name.
+2. Add an exact `repository.url` to `package.json`.
+3. Publish or reserve the package on npm, then configure npm trusted publishing
+   for this GitHub repository, `publish.yml`, and the `npm` environment. Enable
+   direct `npm publish` as an allowed action.
+4. Ensure GitHub Actions may push release commits and tags to the default branch.
+
+The workflow uses npm trusted publishing with short-lived OIDC credentials; it
+does not require a long-lived `NPM_TOKEN`.
 
 ## TypeScript consumer
 
@@ -140,22 +193,45 @@ track("Signup Completed", {
 });
 ```
 
-Unknown event names, missing required properties, invalid enum values, and extra
-properties fail TypeScript checking. They are also rejected at runtime before the
-PostHog adapter is called.
+Unknown event names and missing required properties always fail TypeScript
+checking. Invalid enum values and extra properties also fail unless that particular
+property or event has explicitly enabled the controlled flexibility flags above.
+The same contract is enforced at runtime before the PostHog adapter is called.
 
 For validation without capture, use `parseEvent(name, value)`. The package also
 exports `eventSchemas`, `eventDefinitions`, `AnalyticsEventName`,
 `AnalyticsEvents`, and the discriminated `AnalyticsEvent` union.
 
+## Java consumer
+
+The build emits Java 17 records and enums at
+`generated/java/com/company/analytics/AnalyticsEvents.java`. CI compiles this file.
+See `examples/java/README.md` for a PostHog server adapter and typed usage example.
+
+For production adoption, publish the generated source as a small Maven package.
+Each GitHub release also contains it in a cross-language archive, which is useful
+for evaluation before Maven publication is configured.
+
 ## Other languages
 
-Java, Swift, and other ecosystems cannot import an npm TypeScript module directly.
-The build also emits `generated/analytics-catalog.json`, exposed as
-`data-system/catalog.json`. It is a stable, language-neutral input for generators
-or native packages such as `analytics-java` and `analytics-swift`.
+Swift and other ecosystems cannot import the npm module directly. The build emits
+`generated/analytics-catalog.json`, exposed as `data-system/catalog.json`, as the
+stable language-neutral input for additional native generators.
 
 Adding a new property type or event-level metadata field is intentionally a tool
 change rather than an unvalidated escape hatch. Update the JSON Schema, the types
-in `tooling/event-catalog.ts`, the renderer in `tooling/generate-catalog.ts`, and
+in `tooling/event-catalog.ts`, the TypeScript renderer, every native renderer, and
 their tests. This keeps every generated language contract aligned.
+
+## Performance
+
+Validation compiles the JSON Schema once per command, then validates each file in
+one pass. Generation sorts events once and renders each target linearly. Use
+`pnpm benchmark` to exercise 300 events across 300 separate files—the deliberately
+less efficient layout—when changing validation or generation code.
+
+The main scaling consideration is consumer bundle size rather than repository
+generation time: importing the runtime tracker initializes every Zod schema. At a
+few hundred events this is normally modest, but if browser bundle measurements
+become material, the next step is generated product-area subpath exports rather
+than weakening validation globally.

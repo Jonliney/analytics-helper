@@ -1,0 +1,114 @@
+name: Publish analytics package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: Version increment
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      npm_tag:
+        description: npm distribution tag
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+      access:
+        description: npm package visibility
+        required: true
+        default: restricted
+        type: choice
+        options:
+          - restricted
+          - public
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: publish-analytics-package
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 12.3.4
+          install: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install an OIDC-capable npm CLI
+        run: npm install --global npm@^11.15.0
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check publishing configuration
+        run: |
+          node -e "const p = require('./package.json'); if (!p.name.startsWith('@') || p.name.startsWith('@company/')) throw new Error('Replace the placeholder package name with the real company npm scope.'); if (!p.repository?.url) throw new Error('Set package.json repository.url before publishing with npm trusted publishing.')"
+
+      - name: Increment package version
+        run: npm version "${{ inputs.version_bump }}" --no-git-tag-version
+
+      - name: Validate, build, and test
+        run: pnpm run ci
+
+      - name: Compile generated Java contract
+        run: javac --release 17 generated/java/com/company/analytics/AnalyticsEvents.java
+
+      - name: Read release version
+        id: package
+        run: echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and tag the release
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src/generated generated
+          git add -f dist
+          git commit -m "chore(release): v${VERSION}"
+          git tag "v${VERSION}"
+          git push origin "HEAD:${GITHUB_REF_NAME}" --follow-tags
+
+      - name: Publish to npm
+        run: npm publish --access "${{ inputs.access }}" --tag "${{ inputs.npm_tag }}"
+
+      - name: Create cross-language release archive
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          tar -czf "analytics-contracts-${VERSION}.tar.gz" event-definition.schema.json generated/analytics-catalog.json generated/java
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" "analytics-contracts-${VERSION}.tar.gz" --generate-notes --title "v${VERSION}"

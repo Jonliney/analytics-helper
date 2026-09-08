@@ -5,7 +5,7 @@ import type {
 } from "./event-catalog.js";
 
 function propertyToZod(property: PropertyDefinition): string {
-  if (property.enum) {
+  if (property.enum && !property.allowOtherValues) {
     return `z.enum([${property.enum.map((value) => JSON.stringify(value)).join(", ")}])`;
   }
 
@@ -31,7 +31,14 @@ function eventToZod(event: EventDefinition): string {
     })
     .join("\n");
 
-  return `z.strictObject({${properties ? `\n${properties}\n  ` : ""}})`;
+  const objectSchema = event.allowAdditionalProperties
+    ? "z.object"
+    : "z.strictObject";
+  const additionalProperties = event.allowAdditionalProperties
+    ? ".catchall(z.unknown())"
+    : "";
+
+  return `${objectSchema}({${properties ? `\n${properties}\n  ` : ""}})${additionalProperties}`;
 }
 
 function commentLines(value: string): string {

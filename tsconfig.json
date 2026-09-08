@@ -8,5 +8,11 @@
     "strict": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "tooling/**/*.ts", "tests/**/*.ts", "*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "tooling/**/*.ts",
+    "tests/**/*.ts",
+    "benchmarks/**/*.ts",
+    "*.ts"
+  ]
 }

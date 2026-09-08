@@ -25,6 +25,7 @@
     "generate": "node --import tsx build-analytics.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --import tsx --test tests/*.test.ts",
+    "benchmark": "node --import tsx benchmarks/catalog.ts",
     "build": "pnpm run clean && pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",
     "ci": "pnpm run build && pnpm run typecheck && pnpm run test",
     "prepublishOnly": "pnpm run build"

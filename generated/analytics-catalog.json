@@ -21,6 +21,24 @@
           "optional": true
         }
       }
+    },
+    {
+      "name": "Signup Started",
+      "description": "User begins account registration",
+      "owner": "product",
+      "allowAdditionalProperties": true,
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Authentication method selected for registration",
+          "enum": [
+            "email",
+            "google",
+            "apple"
+          ],
+          "allowOtherValues": true
+        }
+      }
     }
   ]
 }

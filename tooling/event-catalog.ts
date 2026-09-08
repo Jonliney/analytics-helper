@@ -8,12 +8,14 @@ export type PropertyDefinition = {
   description?: string;
   optional?: boolean;
   enum?: string[];
+  allowOtherValues?: boolean;
 };
 
 export type EventDefinition = {
   name: string;
   description: string;
   owner: string;
+  allowAdditionalProperties?: boolean;
   properties: Record<string, PropertyDefinition>;
 };
 

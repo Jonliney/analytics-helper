@@ -41,3 +41,16 @@ test("rejects undeclared properties at runtime", () => {
     /unrecognized key/i,
   );
 });
+
+test("allows additional properties for events that explicitly opt in", () => {
+  assert.deepEqual(
+    parseEvent("Signup Started", {
+      method: "sso",
+      experiment_variant: "short-form",
+    }),
+    {
+      method: "sso",
+      experiment_variant: "short-form",
+    },
+  );
+});

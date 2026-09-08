@@ -19,7 +19,7 @@
         "name": {
           "type": "string",
           "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
-          "pattern": "^[A-Z][A-Za-z0-9]*(?: [A-Z][A-Za-z0-9]*)*$"
+          "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$"
         },
         "description": {
           "type": "string",
@@ -29,6 +29,10 @@
           "type": "string",
           "description": "Team responsible for the event definition.",
           "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "allowAdditionalProperties": {
+          "type": "boolean",
+          "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false."
         },
         "properties": {
           "type": "object",
@@ -65,7 +69,14 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": { "type": "string" }
+        },
+        "allowOtherValues": {
+          "type": "boolean",
+          "description": "Treat enum entries as recommended values rather than an exhaustive set. Defaults to false."
         }
+      },
+      "dependencies": {
+        "allowOtherValues": ["enum"]
       },
       "additionalProperties": false
     },
