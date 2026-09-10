@@ -1,6 +1,8 @@
 import { loadEventCatalog } from "./tooling/event-catalog.js";
+import { loadAnalyticsProjectConfig } from "./tooling/project-config.js";
 
 try {
+  loadAnalyticsProjectConfig(process.cwd());
   const catalog = loadEventCatalog(process.cwd());
 
   for (const source of catalog.sources) {

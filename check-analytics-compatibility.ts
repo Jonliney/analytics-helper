@@ -11,6 +11,7 @@ import {
   loadEventCatalog,
   type EventDefinition,
 } from "./tooling/event-catalog.js";
+import { loadAnalyticsProjectConfig } from "./tooling/project-config.js";
 
 type SelectedBump = Exclude<VersionBump, "none">;
 type OutputFormat = "text" | "markdown";
@@ -129,14 +130,25 @@ function formatComparison(
 
     if (comparison.changes.length === 0) {
       lines.push("", "No contract changes detected.");
-      return lines.join("\n");
+      if (comparison.policyViolations.length === 0) {
+        return lines.join("\n");
+      }
+    } else {
+      lines.push("", "| Impact | Contract | Change |", "| --- | --- | --- |");
+      for (const change of comparison.changes) {
+        lines.push(
+          `| ${change.impact} | \`${escapeMarkdown(change.path)}\` | ${escapeMarkdown(change.message)} |`,
+        );
+      }
     }
 
-    lines.push("", "| Impact | Contract | Change |", "| --- | --- | --- |");
-    for (const change of comparison.changes) {
-      lines.push(
-        `| ${change.impact} | \`${escapeMarkdown(change.path)}\` | ${escapeMarkdown(change.message)} |`,
-      );
+    if (comparison.policyViolations.length > 0) {
+      lines.push("", "### Lifecycle policy violations", "");
+      for (const violation of comparison.policyViolations) {
+        lines.push(
+          `- \`${escapeMarkdown(violation.path)}\`: ${escapeMarkdown(violation.message)}`,
+        );
+      }
     }
 
     return lines.join("\n");
@@ -154,6 +166,9 @@ function formatComparison(
   if (comparison.changes.length === 0) {
     lines.push("No contract changes detected.");
   }
+  for (const violation of comparison.policyViolations) {
+    lines.push(`[BLOCKED] ${violation.path}: ${violation.message}`);
+  }
 
   return lines.join("\n");
 }
@@ -162,7 +177,10 @@ try {
   const options = parseArguments(process.argv.slice(2));
   const previousEvents = readCatalogAtRef(options.baseRef);
   const currentEvents = loadEventCatalog(process.cwd()).events;
-  const comparison = compareCatalogs(previousEvents, currentEvents);
+  const projectConfig = loadAnalyticsProjectConfig(process.cwd());
+  const comparison = compareCatalogs(previousEvents, currentEvents, {
+    deprecationGracePeriodDays: projectConfig.deprecationGracePeriodDays,
+  });
 
   console.log(formatComparison(comparison, options.format, options.bump));
 
@@ -172,6 +190,13 @@ try {
   ) {
     console.error(
       `Selected ${options.bump} bump is insufficient; ${comparison.requiredBump} is required.`,
+    );
+    process.exitCode = 1;
+  }
+
+  if (comparison.policyViolations.length > 0) {
+    console.error(
+      `Analytics lifecycle policy blocked ${comparison.policyViolations.length} event removal${comparison.policyViolations.length === 1 ? "" : "s"}.`,
     );
     process.exitCode = 1;
   }

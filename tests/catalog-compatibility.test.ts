@@ -27,6 +27,7 @@ const signupCompleted: EventDefinition = {
   name: "Signup Completed",
   description: "A user completes registration",
   owner: "growth",
+  status: "active",
   allowAdditionalProperties: false,
   properties: {
     method: stringProperty,
@@ -38,7 +39,26 @@ test("reports no bump for an unchanged contract", () => {
   assert.deepEqual(compareCatalogs([signupCompleted], [signupCompleted]), {
     requiredBump: "none",
     changes: [],
+    policyViolations: [],
   });
+});
+
+test("classifies lifecycle metadata changes as patch", () => {
+  const deprecated: EventDefinition = {
+    ...signupCompleted,
+    status: "deprecated",
+    deprecatedSince: "2026-09-01",
+    replacement: "Signup Started",
+  };
+  const comparison = compareCatalogs([signupCompleted], [deprecated]);
+
+  assert.equal(comparison.requiredBump, "patch");
+  assert.deepEqual(
+    comparison.changes.map(({ message }) => message),
+    [
+      "Event was deprecated on 2026-09-01. Use Signup Started instead.",
+    ],
+  );
 });
 
 test("classifies metadata-only changes as patch", () => {
@@ -104,7 +124,12 @@ test("classifies tracking-call-breaking changes as major", () => {
 });
 
 test("classifies removals and stricter open policies as major", () => {
-  assert.equal(compareCatalogs([signupCompleted], []).requiredBump, "major");
+  const activeRemoval = compareCatalogs([signupCompleted], []);
+  assert.equal(activeRemoval.requiredBump, "major");
+  assert.match(
+    activeRemoval.policyViolations[0]!.message,
+    /must be deprecated in a published catalog/,
+  );
 
   const openEvent: EventDefinition = {
     ...signupCompleted,
@@ -129,6 +154,43 @@ test("classifies removals and stricter open policies as major", () => {
   assert.equal(
     comparison.changes.every(({ impact }) => impact === "major"),
     true,
+  );
+});
+
+test("allows deprecated event removal only after the configured period", () => {
+  const deprecated: EventDefinition = {
+    ...signupCompleted,
+    status: "deprecated",
+    deprecatedSince: "2026-01-01",
+  };
+  const beforeDeadline = compareCatalogs([deprecated], [], {
+    asOf: "2026-03-31",
+    deprecationGracePeriodDays: 90,
+  });
+  const onDeadline = compareCatalogs([deprecated], [], {
+    asOf: "2026-04-01",
+    deprecationGracePeriodDays: 90,
+  });
+
+  assert.equal(beforeDeadline.requiredBump, "major");
+  assert.match(
+    beforeDeadline.policyViolations[0]!.message,
+    /cannot be removed until 2026-04-01/,
+  );
+  assert.deepEqual(onDeadline.policyViolations, []);
+});
+
+test("rejects invalid lifecycle comparison options", () => {
+  assert.throws(
+    () => compareCatalogs([signupCompleted], [], { asOf: "2026-02-30" }),
+    /Invalid comparison date/,
+  );
+  assert.throws(
+    () =>
+      compareCatalogs([signupCompleted], [], {
+        deprecationGracePeriodDays: 1.5,
+      }),
+    /non-negative integer/,
   );
 });
 

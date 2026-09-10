@@ -14,7 +14,22 @@ export type CatalogChange = Readonly<{
 export type CatalogComparison = Readonly<{
   requiredBump: VersionBump;
   changes: readonly CatalogChange[];
+  policyViolations: readonly CatalogPolicyViolation[];
 }>;
+
+export type CatalogPolicyViolation = Readonly<{
+  path: string;
+  message: string;
+}>;
+
+export type CatalogComparisonOptions = Readonly<{
+  asOf?: string;
+  deprecationGracePeriodDays?: number;
+}>;
+
+const DEFAULT_DEPRECATION_GRACE_PERIOD_DAYS = 90;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
 
 const IMPACT_RANK: Readonly<Record<VersionBump, number>> = {
   none: 0,
@@ -25,6 +40,73 @@ const IMPACT_RANK: Readonly<Record<VersionBump, number>> = {
 
 function propertyPath(eventName: string, propertyName: string): string {
   return `${eventName}.${propertyName}`;
+}
+
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function isIsoDate(value: string): boolean {
+  if (!ISO_DATE_PATTERN.test(value)) {
+    return false;
+  }
+
+  const timestamp = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(timestamp) && isoDate(new Date(timestamp)) === value;
+}
+
+function addDays(date: string, days: number): string {
+  return isoDate(
+    new Date(Date.parse(`${date}T00:00:00.000Z`) + days * MILLISECONDS_PER_DAY),
+  );
+}
+
+function resolveComparisonOptions(
+  options: CatalogComparisonOptions,
+): Required<CatalogComparisonOptions> {
+  const asOf = options.asOf ?? isoDate(new Date());
+  const deprecationGracePeriodDays =
+    options.deprecationGracePeriodDays ??
+    DEFAULT_DEPRECATION_GRACE_PERIOD_DAYS;
+
+  if (!isIsoDate(asOf)) {
+    throw new Error(`Invalid comparison date: ${asOf}`);
+  }
+
+  if (
+    !Number.isInteger(deprecationGracePeriodDays) ||
+    deprecationGracePeriodDays < 0
+  ) {
+    throw new Error("deprecationGracePeriodDays must be a non-negative integer");
+  }
+
+  return { asOf, deprecationGracePeriodDays };
+}
+
+function removalPolicyViolation(
+  event: EventDefinition,
+  options: Required<CatalogComparisonOptions>,
+): CatalogPolicyViolation | undefined {
+  if (event.status !== "deprecated") {
+    return {
+      path: event.name,
+      message: "Active events must be deprecated in a published catalog before removal.",
+    };
+  }
+
+  const eligibleOn = addDays(
+    event.deprecatedSince,
+    options.deprecationGracePeriodDays,
+  );
+
+  if (options.asOf < eligibleOn) {
+    return {
+      path: event.name,
+      message: `Event cannot be removed until ${eligibleOn} (${options.deprecationGracePeriodDays}-day deprecation period).`,
+    };
+  }
+
+  return undefined;
 }
 
 function sameValues(
@@ -186,6 +268,40 @@ function compareEvent(
     });
   }
 
+  if (previous.status !== current.status) {
+    changes.push({
+      impact: "patch",
+      path: current.name,
+      message:
+        current.status === "deprecated"
+          ? `Event was deprecated on ${current.deprecatedSince}.${
+              current.replacement
+                ? ` Use ${current.replacement} instead.`
+                : ""
+            }`
+          : "Event was reactivated.",
+    });
+  } else if (
+    previous.status === "deprecated" &&
+    current.status === "deprecated"
+  ) {
+    if (previous.deprecatedSince !== current.deprecatedSince) {
+      changes.push({
+        impact: "patch",
+        path: current.name,
+        message: `Deprecation date changed from ${previous.deprecatedSince} to ${current.deprecatedSince}.`,
+      });
+    }
+
+    if (previous.replacement !== current.replacement) {
+      changes.push({
+        impact: "patch",
+        path: current.name,
+        message: "Replacement event changed.",
+      });
+    }
+  }
+
   if (
     previous.allowAdditionalProperties !== current.allowAdditionalProperties
   ) {
@@ -247,7 +363,9 @@ function compareEvent(
 export function compareCatalogs(
   previousEvents: readonly EventDefinition[],
   currentEvents: readonly EventDefinition[],
+  options: CatalogComparisonOptions = {},
 ): CatalogComparison {
+  const resolvedOptions = resolveComparisonOptions(options);
   const previousByName = new Map(
     previousEvents.map((event) => [event.name, event]),
   );
@@ -259,6 +377,7 @@ export function compareCatalogs(
     ...currentByName.keys(),
   ]);
   const changes: CatalogChange[] = [];
+  const policyViolations: CatalogPolicyViolation[] = [];
 
   for (const eventName of [...eventNames].sort()) {
     const previousEvent = previousByName.get(eventName);
@@ -279,6 +398,10 @@ export function compareCatalogs(
         path: eventName,
         message: "Event was removed.",
       });
+      const violation = removalPolicyViolation(previousEvent, resolvedOptions);
+      if (violation) {
+        policyViolations.push(violation);
+      }
       continue;
     }
 
@@ -295,7 +418,7 @@ export function compareCatalogs(
     "none",
   );
 
-  return { requiredBump, changes };
+  return { requiredBump, changes, policyViolations };
 }
 
 export function isVersionBumpSufficient(

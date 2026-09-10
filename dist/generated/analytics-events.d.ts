@@ -24,10 +24,12 @@ export declare const eventDefinitions: {
     readonly "Signup Completed": {
         readonly description: "User completes account registration";
         readonly owner: "product";
+        readonly status: "active";
     };
     readonly "Signup Started": {
         readonly description: "User begins account registration";
         readonly owner: "product";
+        readonly status: "active";
     };
 };
 export type AnalyticsEventName = keyof typeof eventSchemas;

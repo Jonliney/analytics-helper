@@ -24,7 +24,8 @@
           "optional": true,
           "allowOtherValues": false
         }
-      }
+      },
+      "status": "active"
     },
     {
       "name": "Signup Started",
@@ -43,7 +44,8 @@
           ],
           "allowOtherValues": true
         }
-      }
+      },
+      "status": "active"
     }
   ]
 }

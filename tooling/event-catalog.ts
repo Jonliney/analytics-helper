@@ -155,6 +155,30 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     }
   }
 
+  const eventsByName = new Map(
+    locatedEvents.map(({ definition }) => [definition.name, definition]),
+  );
+
+  for (const { definition, source } of locatedEvents) {
+    if (definition.status !== "deprecated" || !definition.replacement) {
+      continue;
+    }
+
+    const replacement = eventsByName.get(definition.replacement);
+
+    if (definition.replacement === definition.name) {
+      issues.push(`${source}: replacement cannot refer to the same event`);
+    } else if (!replacement) {
+      issues.push(
+        `${source}: replacement event ${JSON.stringify(definition.replacement)} does not exist`,
+      );
+    } else if (replacement.status === "deprecated") {
+      issues.push(
+        `${source}: replacement event ${JSON.stringify(definition.replacement)} is deprecated`,
+      );
+    }
+  }
+
   if (issues.length > 0) {
     throw new CatalogValidationError(issues);
   }

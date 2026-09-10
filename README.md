@@ -131,10 +131,55 @@ exhaustive list into a documented list of recommended values; its generated type
 becomes `string`. Keep both flags off unless the event has a concrete need for an
 open contract.
 
+## Event lifecycle
+
+Events are active by default, so existing definitions do not need a `status`
+field. Deprecate an event before removing it from the catalog:
+
+```json
+{
+  "name": "Signup Started",
+  "description": "A user begins account registration",
+  "owner": "growth",
+  "status": "deprecated",
+  "deprecatedSince": "2026-09-01",
+  "replacement": "Signup Completed",
+  "properties": {}
+}
+```
+
+`deprecatedSince` is required for deprecated events and must be an ISO calendar
+date (`YYYY-MM-DD`). `replacement` is optional; when supplied, it must name a
+different active event in the same catalog. This prevents broken or circular
+migration guidance.
+
+The TypeScript generator adds `@deprecated` documentation to the event's schema
+and definition. The Java generator adds Javadoc plus `@Deprecated(since = "...")`
+to its record. Consumers therefore receive migration guidance through their
+normal editor and compiler tooling.
+
+Removal is a two-release process:
+
+1. Mark the event deprecated, publish the change, and migrate consumers.
+2. Once the configured grace period has elapsed, remove it and publish a major
+   version.
+
+The grace period is set in `analytics.config.json`; it is currently 90 days. CI
+blocks removal of an active event and removal of a deprecated event before its
+deadline. Passing the lifecycle policy does not make deletion backwards-
+compatible: removing any event still requires a major version bump. The previous
+published catalog must contain the deprecation, so adding the metadata and
+deleting the event in one change is also rejected.
+
+`owner` remains a non-empty team identifier rather than a registry-backed value.
+When the company has an authoritative team registry, validation can be added to
+the project configuration without changing each language renderer.
+
 Contract changes affect every consumer:
 
 - Adding an optional property is backwards-compatible.
 - Adding a required property is breaking until every call site supplies it.
+- Deprecating or reactivating an event is a patch-level metadata change.
 - Renaming or removing an event, property, or enum value is breaking.
 
 To make a change:
@@ -168,6 +213,9 @@ bump:
 - `minor`: events or accepted values are added, or validation is relaxed;
 - `patch`: descriptions, ownership, or recommended open-enum values change;
 - `none`: the contracts are equivalent, including when only ordering changes.
+
+Lifecycle policy violations are reported separately from semantic-version
+impact. A sufficient major bump cannot override the minimum deprecation period.
 
 Pull-request CI writes the comparison against the exact base commit to the GitHub
 Actions summary. The publishing workflow compares against the tag matching the
@@ -275,17 +323,20 @@ change rather than an unvalidated escape hatch. Update the Zod authoring schema 
 `tooling/authoring-schema.ts`, the affected language renderers, and their tests.
 The authored TypeScript types and `event-definition.schema.json` are inferred and
 generated from that schema, so the authoring contract has one source of truth.
+Conformance tests run representative definitions through both Zod and Ajv to
+ensure external Draft-07 consumers observe the same validation rules.
 
 ## Maintainer architecture
 
-The package has five deliberate seams:
+The package has these deliberate seams:
 
 | Module interface                       | What its implementation hides                                                                                                                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `parseAuthoredEventDefinitionFile(value)` | Authoring validation, accepted JSON shapes, property-name conventions, and default values. Its input and output types are inferred from the same Zod schema.                     |
 | `renderEventDefinitionJsonSchema()`    | Draft-07 JSON Schema conversion and publishing metadata derived from the authoring schema.                                                                                         |
 | `loadEventCatalog(rootDirectory)`      | Recursive discovery, JSON parsing, schema validation, duplicate detection, sorting, provenance, and normalization of default values. Renderers receive only the normalized events. |
-| `compareCatalogs(previous, current)`   | Event/property matching, enum-set comparison, compatibility classification, and calculation of the minimum semantic version bump.                                                   |
+| `compareCatalogs(previous, current)`   | Event/property matching, enum-set comparison, compatibility classification, lifecycle removal policy, and calculation of the minimum semantic version bump.                         |
+| `loadAnalyticsProjectConfig(rootDirectory)` | Repository policy configuration and validation, currently including the event deprecation grace period.                                                                    |
 | `buildAnalyticsProject(rootDirectory)` | The output registry, language renderers, output locations, and write ordering. Every target is rendered before any artifact is written.                                            |
 | `createTracker(capture, options?)`     | Event lookup, compile-time property matching, runtime Zod validation, invalid-event policy, and forwarding to the injected analytics adapter.                                      |
 

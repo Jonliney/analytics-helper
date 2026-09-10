@@ -6,6 +6,12 @@ const OWNER_PATTERN = /^[a-z][a-z0-9_-]*$/;
 const PROPERTY_NAME_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 
 const descriptionSchema = z.string().min(1);
+const eventNameSchema = z
+  .string()
+  .regex(EVENT_NAME_PATTERN)
+  .describe(
+    "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
+  );
 const optionalSchema = z.boolean().default(false);
 const enumValuesSchema = z
   .array(z.string())
@@ -91,32 +97,93 @@ export const authoredPropertyDefinitionSchema = z
   .pipe(normalizedPropertyDefinitionSchema)
   .meta({ id: "propertyDefinition" });
 
+const eventDefinitionShape = {
+  name: eventNameSchema,
+  description: descriptionSchema,
+  owner: z
+    .string()
+    .regex(OWNER_PATTERN)
+    .describe("Team responsible for the event definition."),
+  allowAdditionalProperties: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
+    ),
+  properties: z
+    .record(
+      z.string().regex(PROPERTY_NAME_PATTERN),
+      authoredPropertyDefinitionSchema,
+    )
+    .readonly(),
+};
+
+const activeEventDefinitionSchema = z.strictObject({
+  ...eventDefinitionShape,
+  status: z
+    .literal("active")
+    .default("active")
+    .describe("Lifecycle status. Defaults to active."),
+});
+
+const deprecatedEventDefinitionSchema = z.strictObject({
+  ...eventDefinitionShape,
+  status: z.literal("deprecated"),
+  deprecatedSince: z
+    .iso.date()
+    .describe("ISO date on which consumers were told to migrate."),
+  replacement: eventNameSchema
+    .optional()
+    .describe("Active event that consumers should use instead, when available."),
+});
+
+const normalizedEventDefinitionShape = {
+  name: z.string(),
+  description: z.string(),
+  owner: z.string(),
+  allowAdditionalProperties: z.boolean(),
+  properties: z
+    .record(z.string(), normalizedPropertyDefinitionSchema)
+    .readonly(),
+};
+
+const normalizedEventDefinitionSchema = z
+  .discriminatedUnion("status", [
+    z.object({
+      ...normalizedEventDefinitionShape,
+      status: z.literal("active"),
+    }),
+    z.object({
+      ...normalizedEventDefinitionShape,
+      status: z.literal("deprecated"),
+      deprecatedSince: z.iso.date(),
+      replacement: eventNameSchema.optional(),
+    }),
+  ])
+  .readonly();
+
 export const authoredEventDefinitionSchema = z
-  .strictObject({
-    name: z
-      .string()
-      .regex(EVENT_NAME_PATTERN)
-      .describe(
-        "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
-      ),
-    description: descriptionSchema,
-    owner: z
-      .string()
-      .regex(OWNER_PATTERN)
-      .describe("Team responsible for the event definition."),
-    allowAdditionalProperties: z
-      .boolean()
-      .default(false)
-      .describe(
-        "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
-      ),
-    properties: z
-      .record(
-        z.string().regex(PROPERTY_NAME_PATTERN),
-        authoredPropertyDefinitionSchema,
-      )
-      .readonly(),
-  })
+  .discriminatedUnion("status", [
+    activeEventDefinitionSchema,
+    deprecatedEventDefinitionSchema,
+  ])
+  .transform((event) => ({
+    name: event.name,
+    description: event.description,
+    owner: event.owner,
+    allowAdditionalProperties: event.allowAdditionalProperties,
+    properties: event.properties,
+    status: event.status,
+    ...(event.status === "deprecated"
+      ? {
+          deprecatedSince: event.deprecatedSince,
+          ...(event.replacement === undefined
+            ? {}
+            : { replacement: event.replacement }),
+        }
+      : {}),
+  }))
+  .pipe(normalizedEventDefinitionSchema)
   .readonly()
   .meta({ id: "eventDefinition" });
 

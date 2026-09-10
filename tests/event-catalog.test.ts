@@ -53,6 +53,75 @@ test("loads multiple events from one product-area file", (t) => {
   assert.deepEqual(result.sources, ["events/auth/auth.json"]);
 });
 
+test("validates replacement events across the complete catalog", (t) => {
+  const root = createCatalogFixture(t, {
+    "auth/auth.json": [
+      validEvent,
+      {
+        ...validEvent,
+        name: "Signup Started",
+        status: "deprecated",
+        deprecatedSince: "2026-09-01",
+        replacement: "Signup Completed",
+      },
+    ],
+  });
+
+  const deprecated = loadEventCatalog(root).events.find(
+    ({ name }) => name === "Signup Started",
+  );
+
+  assert.equal(deprecated?.status, "deprecated");
+  if (deprecated?.status === "deprecated") {
+    assert.equal(deprecated.replacement, "Signup Completed");
+  }
+});
+
+test("rejects missing, self-referential, and deprecated replacements", (t) => {
+  const root = createCatalogFixture(t, {
+    "auth/events.json": [
+      {
+        ...validEvent,
+        name: "Missing Replacement Deprecated",
+        status: "deprecated",
+        deprecatedSince: "2026-09-01",
+        replacement: "Does Not Exist",
+      },
+      {
+        ...validEvent,
+        name: "Self Replacement Deprecated",
+        status: "deprecated",
+        deprecatedSince: "2026-09-01",
+        replacement: "Self Replacement Deprecated",
+      },
+      {
+        ...validEvent,
+        name: "Deprecated Target",
+        status: "deprecated",
+        deprecatedSince: "2026-09-01",
+      },
+      {
+        ...validEvent,
+        name: "Deprecated Replacement Deprecated",
+        status: "deprecated",
+        deprecatedSince: "2026-09-01",
+        replacement: "Deprecated Target",
+      },
+    ],
+  });
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    (error: unknown) => {
+      assert.ok(error instanceof CatalogValidationError);
+      assert.match(error.message, /replacement event "Does Not Exist" does not exist/);
+      assert.match(error.message, /replacement cannot refer to the same event/);
+      assert.match(error.message, /replacement event "Deprecated Target" is deprecated/);
+      return true;
+    },
+  );
+});
+
 test("reports invalid definitions and duplicate event names together", (t) => {
   const root = createCatalogFixture(t, {
     "auth/first.json": validEvent,

@@ -262,7 +262,20 @@ function renderEvent(event: EventDefinition): string {
     mapStatements.push("      values.putAll(additionalProperties);");
   }
 
-  return `  public record ${className}(${components.join(", ")}) implements Event {
+  const deprecation =
+    event.status === "deprecated"
+      ? `  /**
+   * @deprecated Since ${event.deprecatedSince}.${
+     event.replacement
+       ? ` Use {@link ${toPascalCase(event.replacement)}} instead.`
+       : ""
+   }
+   */
+  @Deprecated(since = ${escapeJava(event.deprecatedSince)})
+`
+      : "";
+
+  return `${deprecation}  public record ${className}(${components.join(", ")}) implements Event {
 ${declaredPropertySet}${recommendedValues ? `${recommendedValues}\n\n` : ""}    public ${className} {
 ${constructorChecks.join("\n")}
     }

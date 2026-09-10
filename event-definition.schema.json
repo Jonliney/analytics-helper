@@ -17,45 +17,113 @@
   "description": "A file may contain one event definition or an array of event definitions.",
   "definitions": {
     "eventDefinition": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
-          "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
-        },
-        "description": {
-          "type": "string",
-          "minLength": 1
-        },
-        "owner": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_-]*$",
-          "description": "Team responsible for the event definition."
-        },
-        "allowAdditionalProperties": {
-          "default": false,
-          "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
-          "type": "boolean"
-        },
-        "properties": {
+      "oneOf": [
+        {
           "type": "object",
-          "propertyNames": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
+              "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "owner": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$",
+              "description": "Team responsible for the event definition."
+            },
+            "allowAdditionalProperties": {
+              "default": false,
+              "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
+              "type": "boolean"
+            },
+            "properties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/propertyDefinition"
+              }
+            },
+            "status": {
+              "default": "active",
+              "description": "Lifecycle status. Defaults to active.",
+              "type": "string",
+              "const": "active"
+            }
           },
-          "additionalProperties": {
-            "$ref": "#/definitions/propertyDefinition"
-          }
+          "required": [
+            "name",
+            "description",
+            "owner",
+            "properties"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
+              "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "owner": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$",
+              "description": "Team responsible for the event definition."
+            },
+            "allowAdditionalProperties": {
+              "default": false,
+              "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
+              "type": "boolean"
+            },
+            "properties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/propertyDefinition"
+              }
+            },
+            "status": {
+              "type": "string",
+              "const": "deprecated"
+            },
+            "deprecatedSince": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "description": "ISO date on which consumers were told to migrate."
+            },
+            "replacement": {
+              "description": "Active event that consumers should use instead, when available.",
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$"
+            }
+          },
+          "required": [
+            "name",
+            "description",
+            "owner",
+            "properties",
+            "status",
+            "deprecatedSince"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "name",
-        "description",
-        "owner",
-        "properties"
-      ],
-      "additionalProperties": false
+      ]
     },
     "propertyDefinition": {
       "oneOf": [

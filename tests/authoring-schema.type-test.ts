@@ -17,9 +17,11 @@ const authoredEvent: AuthoredEventDefinition = {
 const normalizedEvent: EventDefinition =
   authoredEventDefinitionSchema.parse(authoredEvent);
 const defaultedFlag: boolean = normalizedEvent.allowAdditionalProperties;
+const defaultedStatus: "active" | "deprecated" = normalizedEvent.status;
 const defaultedPropertyFlag: boolean =
   normalizedEvent.properties.method!.allowOtherValues;
 void defaultedFlag;
+void defaultedStatus;
 void defaultedPropertyFlag;
 
 const invalidNumberProperty: AuthoredPropertyDefinition = {

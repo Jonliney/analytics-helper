@@ -25,6 +25,23 @@ test("generates typed Java records from the shared catalog", () => {
   assert.match(output, /return "Signup Completed"/);
 });
 
+test("annotates deprecated Java event records", () => {
+  const event = events.find(({ name }) => name === "Signup Started")!;
+  const output = renderJavaCatalog([
+    {
+      ...event,
+      status: "deprecated",
+      deprecatedSince: "2026-09-01",
+      replacement: "Signup Completed",
+    },
+    events.find(({ name }) => name === "Signup Completed")!,
+  ]);
+
+  assert.match(output, /@deprecated Since 2026-09-01\./);
+  assert.match(output, /Use \{@link SignupCompleted\} instead\./);
+  assert.match(output, /@Deprecated\(since = "2026-09-01"\)/);
+});
+
 test("rejects Java class-name collisions", () => {
   const event = events[0]!;
 

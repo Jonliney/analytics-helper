@@ -1,7 +1,11 @@
+import { z } from "zod";
+
 import type {
   EventDefinition,
   PropertyDefinition,
 } from "./event-catalog.js";
+
+const isoDateSchema = z.iso.date();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -79,7 +83,34 @@ function parseEvent(value: unknown, index: number): EventDefinition {
     throw new Error(`${path}.allowAdditionalProperties must be a boolean.`);
   }
 
-  return {
+  const status = value.status ?? "active";
+
+  if (status !== "active" && status !== "deprecated") {
+    throw new Error(`${path}.status is invalid.`);
+  }
+
+  if (
+    value.replacement !== undefined &&
+    typeof value.replacement !== "string"
+  ) {
+    throw new Error(`${path}.replacement must be a string.`);
+  }
+
+  if (status === "active") {
+    if (
+      value.deprecatedSince !== undefined ||
+      value.replacement !== undefined
+    ) {
+      throw new Error(`${path} has deprecation metadata but is active.`);
+    }
+  } else if (
+    typeof value.deprecatedSince !== "string" ||
+    !isoDateSchema.safeParse(value.deprecatedSince).success
+  ) {
+    throw new Error(`${path}.deprecatedSince must be an ISO date.`);
+  }
+
+  const event = {
     name: value.name,
     description: value.description,
     owner: value.owner,
@@ -91,6 +122,17 @@ function parseEvent(value: unknown, index: number): EventDefinition {
       ]),
     ),
   };
+
+  return status === "deprecated"
+    ? {
+        ...event,
+        status,
+        deprecatedSince: value.deprecatedSince as string,
+        ...(value.replacement === undefined
+          ? {}
+          : { replacement: value.replacement as string }),
+      }
+    : { ...event, status };
 }
 
 /**

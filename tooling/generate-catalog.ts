@@ -48,27 +48,55 @@ function commentLines(value: string): string {
     .join("\n");
 }
 
+function deprecationMessage(event: EventDefinition): string | undefined {
+  if (event.status !== "deprecated") {
+    return undefined;
+  }
+
+  return `Since ${event.deprecatedSince}.${
+    event.replacement ? ` Use ${event.replacement} instead.` : ""
+  }`;
+}
+
 export function renderTypeScriptCatalog(
   events: readonly EventDefinition[],
 ): string {
   const schemas = events
-    .map(
-      (event) => `  /**
+    .map((event) => {
+      const deprecation = deprecationMessage(event);
+
+      return `  /**
 ${commentLines(event.description)}
    * Owner: ${event.owner.replaceAll("*/", "*\\/")}
-   */
-  ${JSON.stringify(event.name)}: ${eventToZod(event)},`,
-    )
+${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
+  ${JSON.stringify(event.name)}: ${eventToZod(event)},`;
+    })
     .join("\n");
 
   const definitions = events
-    .map(
-      (event) =>
-        `  ${JSON.stringify(event.name)}: {
+    .map((event) => {
+      const deprecation = deprecationMessage(event);
+
+      return `${
+        deprecation
+          ? `  /** @deprecated ${deprecation} */\n`
+          : ""
+      }  ${JSON.stringify(event.name)}: {
     description: ${JSON.stringify(event.description)},
     owner: ${JSON.stringify(event.owner)},
-  },`,
-    )
+    status: ${JSON.stringify(event.status)},${
+      event.status === "deprecated"
+        ? `
+    deprecatedSince: ${JSON.stringify(event.deprecatedSince)},${
+      event.replacement
+        ? `
+    replacement: ${JSON.stringify(event.replacement)},`
+        : ""
+    }`
+        : ""
+    }
+  },`;
+    })
     .join("\n");
 
   return `// AUTO-GENERATED FILE.
