@@ -5,13 +5,13 @@ import {
   isVersionBumpSufficient,
   type CatalogComparison,
   type VersionBump,
-} from "./tooling/catalog-compatibility.js";
-import { parseCatalogSnapshot } from "./tooling/catalog-snapshot.js";
+} from "../tooling/catalog-compatibility.js";
+import { parseCatalogSnapshot } from "../tooling/catalog-snapshot.js";
 import {
   loadEventCatalog,
   type EventDefinition,
-} from "./tooling/event-catalog.js";
-import { loadAnalyticsProjectConfig } from "./tooling/project-config.js";
+} from "../tooling/event-catalog.js";
+import { loadAnalyticsProjectConfig } from "../tooling/project-config.js";
 
 type SelectedBump = Exclude<VersionBump, "none">;
 type OutputFormat = "text" | "markdown";

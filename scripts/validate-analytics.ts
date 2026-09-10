@@ -1,5 +1,5 @@
-import { loadEventCatalog } from "./tooling/event-catalog.js";
-import { loadAnalyticsProjectConfig } from "./tooling/project-config.js";
+import { loadEventCatalog } from "../tooling/event-catalog.js";
+import { loadAnalyticsProjectConfig } from "../tooling/project-config.js";
 
 try {
   loadAnalyticsProjectConfig(process.cwd());

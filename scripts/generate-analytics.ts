@@ -1,4 +1,4 @@
-import { buildAnalyticsProject } from "./tooling/build-project.js";
+import { buildAnalyticsProject } from "../tooling/build-project.js";
 
 const rootDirectory = process.cwd();
 

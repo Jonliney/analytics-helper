@@ -336,6 +336,10 @@ ensure external Draft-07 consumers observe the same validation rules.
 
 ## Maintainer architecture
 
+Repository commands live in `scripts/`; they are command-line adapters used by
+`package.json` and CI. Reusable generation and validation implementation lives in
+`tooling/`, while `src/` contains the runtime package published to consumers.
+
 The package has these deliberate seams:
 
 | Module interface                       | What its implementation hides                                                                                                                                                      |

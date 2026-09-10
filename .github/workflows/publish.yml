@@ -99,7 +99,7 @@ jobs:
           BASE_REF: ${{ steps.previous.outputs.ref }}
           SELECTED_BUMP: ${{ inputs.version_bump }}
         run: >-
-          node --import tsx check-analytics-compatibility.ts
+          node --import tsx scripts/check-analytics-compatibility.ts
           --base-ref "$BASE_REF" --bump "$SELECTED_BUMP"
           --format markdown >> "$GITHUB_STEP_SUMMARY"
 
