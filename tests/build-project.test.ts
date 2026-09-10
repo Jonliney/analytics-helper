@@ -13,6 +13,7 @@ test("builds every language artifact through one interface", (t) => {
 
   assert.equal(result.eventCount, 1);
   assert.deepEqual(result.artifacts, [
+    "event-definition.schema.json",
     "src/generated/analytics-events.ts",
     "generated/analytics-catalog.json",
     "generated/java/com/company/analytics/AnalyticsEvents.java",
@@ -37,4 +38,8 @@ test("renders all targets before writing any artifact", (t) => {
   );
   assert.equal(fs.existsSync(path.join(root, "src/generated")), false);
   assert.equal(fs.existsSync(path.join(root, "generated")), false);
+  assert.equal(
+    fs.existsSync(path.join(root, "event-definition.schema.json")),
+    false,
+  );
 });

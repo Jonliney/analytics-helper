@@ -1,25 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://company.example/schemas/analytics-event-definition.schema.json",
-  "title": "Analytics event definition file",
-  "description": "A file may contain one event definition or an array of event definitions.",
-  "oneOf": [
-    { "$ref": "#/definitions/eventDefinition" },
+  "anyOf": [
     {
-      "type": "array",
+      "$ref": "#/definitions/eventDefinition"
+    },
+    {
       "minItems": 1,
-      "items": { "$ref": "#/definitions/eventDefinition" }
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/eventDefinition"
+      }
     }
   ],
+  "title": "Analytics event definition file",
+  "description": "A file may contain one event definition or an array of event definitions.",
   "definitions": {
     "eventDefinition": {
       "type": "object",
-      "required": ["name", "description", "owner", "properties"],
       "properties": {
         "name": {
           "type": "string",
-          "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
-          "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$"
+          "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
+          "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
         },
         "description": {
           "type": "string",
@@ -27,78 +30,118 @@
         },
         "owner": {
           "type": "string",
-          "description": "Team responsible for the event definition.",
-          "pattern": "^[a-z][a-z0-9_-]*$"
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "description": "Team responsible for the event definition."
         },
         "allowAdditionalProperties": {
-          "type": "boolean",
-          "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false."
+          "default": false,
+          "description": "Allow undeclared event properties while continuing to enforce declared required properties. Defaults to false.",
+          "type": "boolean"
         },
         "properties": {
           "type": "object",
           "propertyNames": {
+            "type": "string",
             "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
           },
           "additionalProperties": {
-            "oneOf": [
-              { "$ref": "#/definitions/stringProperty" },
-              { "$ref": "#/definitions/numberProperty" },
-              { "$ref": "#/definitions/booleanProperty" }
-            ]
+            "$ref": "#/definitions/propertyDefinition"
           }
         }
       },
+      "required": [
+        "name",
+        "description",
+        "owner",
+        "properties"
+      ],
       "additionalProperties": false
     },
-    "propertyDescription": {
-      "type": "string",
-      "minLength": 1
-    },
-    "propertyOptional": {
-      "type": "boolean"
-    },
-    "stringProperty": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "const": "string" },
-        "description": { "$ref": "#/definitions/propertyDescription" },
-        "optional": { "$ref": "#/definitions/propertyOptional" },
-        "enum": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": { "type": "string" }
+    "propertyDefinition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "string"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            },
+            "enum": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "allowOtherValues": {
+              "default": false,
+              "description": "Treat enum entries as recommended values rather than an exhaustive set. Defaults to false.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "A string property may optionally declare exhaustive or recommended values.",
+          "dependencies": {
+            "allowOtherValues": [
+              "enum"
+            ]
+          }
         },
-        "allowOtherValues": {
-          "type": "boolean",
-          "description": "Treat enum entries as recommended values rather than an exhaustive set. Defaults to false."
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "number"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
         }
-      },
-      "dependencies": {
-        "allowOtherValues": ["enum"]
-      },
-      "additionalProperties": false
-    },
-    "numberProperty": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "const": "number" },
-        "description": { "$ref": "#/definitions/propertyDescription" },
-        "optional": { "$ref": "#/definitions/propertyOptional" }
-      },
-      "additionalProperties": false
-    },
-    "booleanProperty": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "const": "boolean" },
-        "description": { "$ref": "#/definitions/propertyDescription" },
-        "optional": { "$ref": "#/definitions/propertyOptional" }
-      },
-      "additionalProperties": false
+      ]
     }
   }
 }

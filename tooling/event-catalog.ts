@@ -1,43 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { Ajv, type AnySchema, type ErrorObject } from "ajv";
+import { z } from "zod";
 
-export type PropertyDefinition = Readonly<{
-  type: "string" | "number" | "boolean";
-  description?: string;
-  optional: boolean;
-  enum?: readonly string[];
-  allowOtherValues: boolean;
-}>;
+import {
+  parseAuthoredEventDefinitionFile,
+  type EventDefinition,
+} from "./authoring-schema.js";
 
-export type EventDefinition = Readonly<{
-  name: string;
-  description: string;
-  owner: string;
-  allowAdditionalProperties: boolean;
-  properties: Readonly<Record<string, PropertyDefinition>>;
-}>;
-
-type AuthoredPropertyDefinition = Omit<
-  PropertyDefinition,
-  "optional" | "allowOtherValues"
-> & {
-  optional?: boolean;
-  allowOtherValues?: boolean;
-};
-
-type AuthoredEventDefinition = Omit<
+export type {
   EventDefinition,
-  "allowAdditionalProperties" | "properties"
-> & {
-  allowAdditionalProperties?: boolean;
-  properties: Record<string, AuthoredPropertyDefinition>;
-};
-
-type EventDefinitionFile =
-  | AuthoredEventDefinition
-  | AuthoredEventDefinition[];
+  PropertyDefinition,
+} from "./authoring-schema.js";
 
 type LocatedEventDefinition = {
   definition: EventDefinition;
@@ -78,69 +52,27 @@ function findJsonFiles(directory: string): string[] {
     .sort((left, right) => left.localeCompare(right));
 }
 
-function formatSchemaError(error: ErrorObject): string {
-  const location = error.instancePath || "/";
-  const details = error.params
-    ? ` (${Object.entries(error.params)
-        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-        .join(", ")})`
-    : "";
+function formatSchemaIssue(issue: z.core.$ZodIssue): string {
+  const location =
+    issue.path.length === 0
+      ? "/"
+      : `/${issue.path
+          .map((segment) =>
+            String(segment).replaceAll("~", "~0").replaceAll("/", "~1"),
+          )
+          .join("/")}`;
 
-  return `${location} ${error.message ?? "is invalid"}${details}`;
-}
-
-function normalizeEventDefinition(
-  event: AuthoredEventDefinition,
-): EventDefinition {
-  return {
-    name: event.name,
-    description: event.description,
-    owner: event.owner,
-    allowAdditionalProperties: event.allowAdditionalProperties ?? false,
-    properties: Object.fromEntries(
-      Object.entries(event.properties).map(([name, property]) => [
-        name,
-        {
-          type: property.type,
-          ...(property.description === undefined
-            ? {}
-            : { description: property.description }),
-          optional: property.optional ?? false,
-          ...(property.enum === undefined ? {} : { enum: property.enum }),
-          allowOtherValues: property.allowOtherValues ?? false,
-        },
-      ]),
-    ),
-  };
+  return `${location} ${issue.message}`;
 }
 
 export function loadEventCatalog(rootDirectory: string): EventCatalog {
   const eventsDirectory = path.join(rootDirectory, "events");
-  const schemaPath = path.join(rootDirectory, "event-definition.schema.json");
   const issues: string[] = [];
 
   if (!fs.existsSync(eventsDirectory)) {
     throw new CatalogValidationError(["events/: directory does not exist"]);
   }
 
-  if (!fs.existsSync(schemaPath)) {
-    throw new CatalogValidationError([
-      "event-definition.schema.json: schema does not exist",
-    ]);
-  }
-
-  let schema: unknown;
-
-  try {
-    schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
-  } catch (error) {
-    throw new CatalogValidationError([
-      `event-definition.schema.json: ${error instanceof Error ? error.message : "invalid JSON"}`,
-    ]);
-  }
-
-  const ajv = new Ajv({ allErrors: true, strict: true });
-  const validate = ajv.compile<EventDefinitionFile>(schema as AnySchema);
   const files = findJsonFiles(eventsDirectory);
 
   if (files.length === 0) {
@@ -169,18 +101,27 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
       continue;
     }
 
-    if (!validate(value)) {
-      for (const error of validate.errors ?? []) {
-        issues.push(`${source}: ${formatSchemaError(error)}`);
+    let definitions: readonly EventDefinition[];
+
+    try {
+      const parsed = parseAuthoredEventDefinitionFile(value);
+      definitions = Array.isArray(parsed) ? parsed : [parsed];
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        for (const issue of error.issues) {
+          issues.push(`${source}: ${formatSchemaIssue(issue)}`);
+        }
+      } else {
+        issues.push(
+          `${source}: ${error instanceof Error ? error.message : "validation failed"}`,
+        );
       }
       continue;
     }
 
-    const definitions = Array.isArray(value) ? value : [value];
-
     for (const definition of definitions) {
       locatedEvents.push({
-        definition: normalizeEventDefinition(definition),
+        definition,
         source,
       });
     }

@@ -70,7 +70,36 @@ test("reports invalid definitions and duplicate event names together", (t) => {
       assert.ok(error instanceof CatalogValidationError);
       assert.match(error.message, /duplicate event name "Signup Completed"/);
       assert.match(error.message, /must match pattern/);
-      assert.match(error.message, /must NOT have additional properties/);
+      assert.match(error.message, /Unrecognized key.*unexpected/);
+      return true;
+    },
+  );
+});
+
+test("rejects duplicate enum values and misplaced flexibility flags", (t) => {
+  const root = createCatalogFixture(t, {
+    "duplicate-enum.json": {
+      ...validEvent,
+      name: "Duplicate Enum Tested",
+      properties: {
+        method: { type: "string", enum: ["email", "email"] },
+      },
+    },
+    "misplaced-flag.json": {
+      ...validEvent,
+      name: "Misplaced Flag Tested",
+      properties: {
+        method: { type: "string", allowOtherValues: true },
+      },
+    },
+  });
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    (error: unknown) => {
+      assert.ok(error instanceof CatalogValidationError);
+      assert.match(error.message, /Enum values must be unique/);
+      assert.match(error.message, /allowOtherValues/);
       return true;
     },
   );

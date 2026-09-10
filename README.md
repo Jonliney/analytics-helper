@@ -141,7 +141,8 @@ To make a change:
 
 1. Edit or add a JSON file under `events/`.
 2. Run `pnpm validate` for authoring feedback.
-3. Run `pnpm generate` to update the TypeScript and language-neutral outputs.
+3. Run `pnpm generate` to update the authoring JSON Schema and every language
+   output.
 4. Run `pnpm test` and `pnpm typecheck`.
 5. Commit the definition and generated files together, then publish a package
    version appropriate for the compatibility impact.
@@ -270,16 +271,19 @@ Swift and other ecosystems cannot import the npm module directly. The build emit
 stable language-neutral input for additional native generators.
 
 Adding a new property type or event-level metadata field is intentionally a tool
-change rather than an unvalidated escape hatch. Update the JSON Schema, the types
-in `tooling/event-catalog.ts`, the TypeScript renderer, every native renderer, and
-their tests. This keeps every generated language contract aligned.
+change rather than an unvalidated escape hatch. Update the Zod authoring schema in
+`tooling/authoring-schema.ts`, the affected language renderers, and their tests.
+The authored TypeScript types and `event-definition.schema.json` are inferred and
+generated from that schema, so the authoring contract has one source of truth.
 
 ## Maintainer architecture
 
-The package has three deliberate seams:
+The package has five deliberate seams:
 
 | Module interface                       | What its implementation hides                                                                                                                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parseAuthoredEventDefinitionFile(value)` | Authoring validation, accepted JSON shapes, property-name conventions, and default values. Its input and output types are inferred from the same Zod schema.                     |
+| `renderEventDefinitionJsonSchema()`    | Draft-07 JSON Schema conversion and publishing metadata derived from the authoring schema.                                                                                         |
 | `loadEventCatalog(rootDirectory)`      | Recursive discovery, JSON parsing, schema validation, duplicate detection, sorting, provenance, and normalization of default values. Renderers receive only the normalized events. |
 | `compareCatalogs(previous, current)`   | Event/property matching, enum-set comparison, compatibility classification, and calculation of the minimum semantic version bump.                                                   |
 | `buildAnalyticsProject(rootDirectory)` | The output registry, language renderers, output locations, and write ordering. Every target is rendered before any artifact is written.                                            |

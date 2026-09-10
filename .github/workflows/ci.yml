@@ -27,7 +27,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ci
       - name: Ensure generated artifacts are committed
-        run: git diff --exit-code -- src/generated generated dist
+        run: >-
+          git diff --exit-code --
+          event-definition.schema.json src/generated generated dist
       - name: Report analytics contract compatibility
         if: github.event_name == 'pull_request'
         env:

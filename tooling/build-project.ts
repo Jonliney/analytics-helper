@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { renderEventDefinitionJsonSchema } from "./authoring-schema.js";
 import type { EventDefinition } from "./event-catalog.js";
 import { loadEventCatalog } from "./event-catalog.js";
 import {
@@ -15,6 +16,10 @@ type OutputTarget = Readonly<{
 }>;
 
 const OUTPUT_TARGETS: readonly OutputTarget[] = [
+  {
+    relativePath: "event-definition.schema.json",
+    render: renderEventDefinitionJsonSchema,
+  },
   {
     relativePath: "src/generated/analytics-events.ts",
     render: renderTypeScriptCatalog,

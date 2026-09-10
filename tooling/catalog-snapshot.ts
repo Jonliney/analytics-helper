@@ -51,7 +51,7 @@ function parseProperty(value: unknown, path: string): PropertyDefinition {
     optional: value.optional ?? false,
     ...(value.enum === undefined
       ? {}
-      : { enum: value.enum as readonly string[] }),
+      : { enum: [...(value.enum as string[])] }),
     allowOtherValues: value.allowOtherValues ?? false,
   };
 }
