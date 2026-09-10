@@ -107,6 +107,42 @@ Unknown events, missing required properties, invalid enum values, and unexpected
 properties fail TypeScript checking and runtime validation. Use
 `parseEvent(name, properties)` when validation is needed without capture.
 
+## Publish privately to npm
+
+1. Change the package name in `package.json` to the company's npm scope, such as
+   `@your-company/analytics`, and add the repository URL.
+2. In npm, configure that package's trusted publisher for this GitHub repository,
+   `.github/workflows/publish.yml`, and the `npm` environment.
+3. Run **Publish analytics package** from GitHub Actions on the default branch.
+   Select `restricted` access and the required version bump.
+
+Publishing uses GitHub OIDC, so this repository does not need an npm publishing
+token. A repository that installs the private package does need read access. Add
+an `.npmrc` to that repository:
+
+```ini
+@your-company:registry=https://registry.npmjs.org/
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+```
+
+Set `NPM_TOKEN` locally using a read-only granular npm token, then add the
+package:
+
+```sh
+pnpm add @your-company/analytics
+```
+
+For CI, store the same kind of read-only token as a GitHub Actions secret and
+expose it to the install step:
+
+```yaml
+- run: pnpm install --frozen-lockfile
+  env:
+    NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+Never commit the token itself.
+
 ## Other languages
 
 The build also generates:
@@ -115,7 +151,3 @@ The build also generates:
   `generated/java/com/company/analytics/AnalyticsEvents.java`.
 - A language-neutral catalog in `generated/analytics-catalog.json` for Swift and
   future generators.
-
-The manual **Publish analytics package** GitHub Action validates the repository,
-checks the selected semantic-version bump, publishes the npm package, and creates
-a release containing the cross-language contracts.
