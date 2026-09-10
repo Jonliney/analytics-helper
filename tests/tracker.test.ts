@@ -48,7 +48,7 @@ test("rejects undeclared properties at runtime", () => {
 
 test("allows additional properties for events that explicitly opt in", () => {
   assert.deepEqual(
-    parseEvent("Signup Started", {
+    parseEvent("signup_started", {
       method: "sso",
       experiment_variant: "short-form",
     }),

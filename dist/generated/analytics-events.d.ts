@@ -16,7 +16,7 @@ export declare const eventSchemas: {
      * User begins account registration
      * Owner: product
      */
-    readonly "Signup Started": z.ZodObject<{
+    readonly signup_started: z.ZodObject<{
         method: z.ZodString;
     }, z.core.$catchall<z.ZodUnknown>>;
 };
@@ -26,7 +26,7 @@ export declare const eventDefinitions: {
         readonly owner: "product";
         readonly status: "active";
     };
-    readonly "Signup Started": {
+    readonly signup_started: {
         readonly description: "User begins account registration";
         readonly owner: "product";
         readonly status: "active";

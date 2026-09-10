@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-const EVENT_NAME_PATTERN =
-  /^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$/;
+const EVENT_NAME_PATTERN = /^\S(?:.*\S)?$/;
 const OWNER_PATTERN = /^[a-z][a-z0-9_-]*$/;
 const PROPERTY_NAME_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 
 const descriptionSchema = z.string().min(1);
 const eventNameSchema = z
   .string()
+  .min(1)
   .regex(EVENT_NAME_PATTERN)
   .describe(
-    "Stable Title Case event name sent to the analytics provider, such as Signup Started.",
+    "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed.",
   );
 const optionalSchema = z.boolean().default(false);
 const enumValuesSchema = z

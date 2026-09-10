@@ -23,8 +23,9 @@
           "properties": {
             "name": {
               "type": "string",
-              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
-              "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
             },
             "description": {
               "type": "string",
@@ -70,8 +71,9 @@
           "properties": {
             "name": {
               "type": "string",
-              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$",
-              "description": "Stable Title Case event name sent to the analytics provider, such as Signup Started."
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
             },
             "description": {
               "type": "string",
@@ -110,7 +112,8 @@
             "replacement": {
               "description": "Active event that consumers should use instead, when available.",
               "type": "string",
-              "pattern": "^[A-Z0-9][A-Za-z0-9]*(?: [A-Z0-9][A-Za-z0-9]*)*$"
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$"
             }
           },
           "required": [

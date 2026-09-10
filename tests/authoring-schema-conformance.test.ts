@@ -33,8 +33,28 @@ const cases: readonly Readonly<{
     valid: false,
   },
   {
-    name: "a non-Title-Case event name",
-    value: { ...baseEvent, name: "signup completed" },
+    name: "a snake_case event name",
+    value: { ...baseEvent, name: "signup_completed" },
+    valid: true,
+  },
+  {
+    name: "mixed established event-name styles",
+    value: [
+      baseEvent,
+      { ...baseEvent, name: "signup_started" },
+      { ...baseEvent, name: "passwordResetRequested" },
+      { ...baseEvent, name: "auth:signup-started" },
+    ],
+    valid: true,
+  },
+  {
+    name: "an empty event name",
+    value: { ...baseEvent, name: "" },
+    valid: false,
+  },
+  {
+    name: "an event name with surrounding whitespace",
+    value: { ...baseEvent, name: " Signup Completed " },
     valid: false,
   },
   {
@@ -160,12 +180,12 @@ const cases: readonly Readonly<{
     valid: false,
   },
   {
-    name: "an invalid replacement event name",
+    name: "a replacement event name with surrounding whitespace",
     value: {
       ...baseEvent,
       status: "deprecated",
       deprecatedSince: "2026-09-01",
-      replacement: "signup started",
+      replacement: " signup_started",
     },
     valid: false,
   },

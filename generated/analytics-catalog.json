@@ -28,7 +28,7 @@
       "status": "active"
     },
     {
-      "name": "Signup Started",
+      "name": "signup_started",
       "description": "User begins account registration",
       "owner": "product",
       "allowAdditionalProperties": true,

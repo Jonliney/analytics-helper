@@ -26,7 +26,7 @@ test("generates typed Java records from the shared catalog", () => {
 });
 
 test("annotates deprecated Java event records", () => {
-  const event = events.find(({ name }) => name === "Signup Started")!;
+  const event = events.find(({ name }) => name === "signup_started")!;
   const output = renderJavaCatalog([
     {
       ...event,

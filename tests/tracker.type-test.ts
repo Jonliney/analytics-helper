@@ -6,7 +6,7 @@ import {
 const track = createTracker(() => undefined);
 
 track("Signup Completed", { method: "google" });
-track("Signup Started", {
+track("signup_started", {
   method: "sso",
   experiment_variant: "short-form",
 });
@@ -18,7 +18,7 @@ track("missing_event", {});
 track("Signup Completed", {});
 
 // @ts-expect-error Open events still enforce declared required properties.
-track("Signup Started", { experiment_variant: "short-form" });
+track("signup_started", { experiment_variant: "short-form" });
 
 // @ts-expect-error enum values are generated as string literals.
 track("Signup Completed", { method: "password" });

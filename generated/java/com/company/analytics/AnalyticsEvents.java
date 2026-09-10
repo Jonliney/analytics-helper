@@ -74,7 +74,7 @@ public final class AnalyticsEvents {
 
     @Override
     public String name() {
-      return "Signup Started";
+      return "signup_started";
     }
 
     @Override

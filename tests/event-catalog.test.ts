@@ -128,7 +128,7 @@ test("reports invalid definitions and duplicate event names together", (t) => {
     "auth/second.json": validEvent,
     "broken.json": {
       ...validEvent,
-      name: "not valid",
+      name: " padded event name",
       unexpected: true,
     },
   });

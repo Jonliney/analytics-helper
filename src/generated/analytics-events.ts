@@ -16,7 +16,7 @@ export const eventSchemas = {
    * User begins account registration
    * Owner: product
    */
-  "Signup Started": z.object({
+  "signup_started": z.object({
     "method": z.string().describe("Authentication method selected for registration"),
   }).catchall(z.unknown()),
 } as const;
@@ -27,7 +27,7 @@ export const eventDefinitions = {
     owner: "product",
     status: "active",
   },
-  "Signup Started": {
+  "signup_started": {
     description: "User begins account registration",
     owner: "product",
     status: "active",

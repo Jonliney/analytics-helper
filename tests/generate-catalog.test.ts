@@ -9,7 +9,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const events = loadEventCatalog(repositoryRoot).events;
 
 test("marks deprecated TypeScript event exports", () => {
-  const event = events.find(({ name }) => name === "Signup Started")!;
+  const event = events.find(({ name }) => name === "signup_started")!;
   const output = renderTypeScriptCatalog([
     {
       ...event,

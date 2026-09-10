@@ -4,17 +4,25 @@ This repository is the source of truth for product analytics events. It validate
 event definitions in CI and generates a TypeScript package containing exact event
 names, property types, and strict Zod schemas.
 
-## Naming convention
+## Event names
 
-Event names use a human-readable `Object Action` convention in Title Case:
+The package does not enforce a naming convention. Existing and new catalogs can
+use human-readable names, `snake_case`, `camelCase`, namespaced identifiers, or
+another provider convention:
 
 - `Signup Started`
-- `Signup Completed`
-- `Password Reset Requested`
+- `signup_started`
+- `signupStarted`
+- `auth:signup-started`
 
-Use a stable name that describes what happened, not where the instrumentation is
-implemented. The value is sent to PostHog exactly as written and should be treated
-as a permanent identifier. Renaming it creates a different event in analytics.
+Consistency within a product area is useful guidance, but CI does not reject a
+catalog that contains multiple styles. Use a stable name that describes what
+happened, not where the instrumentation is implemented. The value is sent to
+PostHog exactly as written and should be treated as a permanent identifier.
+Renaming it creates a different event in analytics.
+
+Names must be non-empty and cannot contain accidental leading or trailing
+whitespace. These are data-quality protections rather than style rules.
 
 Property names use `snake_case`, such as `campaign_id` and `signup_method`. This
 keeps properties comfortable to use in code, queries, and exported data.
