@@ -3,6 +3,19 @@
 
 import { z } from "zod";
 
+export const eventNames = {
+  auth: {
+    /**
+     * User completes account registration
+     */
+    signupCompleted: "Signup Completed",
+    /**
+     * User begins account registration
+     */
+    signupStarted: "signup_started",
+  },
+} as const;
+
 export const eventSchemas = {
   /**
    * User completes account registration
@@ -25,11 +38,13 @@ export const eventDefinitions = {
   "Signup Completed": {
     description: "User completes account registration",
     owner: "product",
+    domain: "auth",
     status: "active",
   },
   "signup_started": {
     description: "User begins account registration",
     owner: "product",
+    domain: "auth",
     status: "active",
   },
 } as const;

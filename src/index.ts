@@ -9,6 +9,7 @@ export {
 
 export {
   eventDefinitions,
+  eventNames,
   eventSchemas,
 } from "./generated/analytics-events.js";
 

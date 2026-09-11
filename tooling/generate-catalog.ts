@@ -2,6 +2,10 @@ import type {
   EventDefinition,
   PropertyDefinition,
 } from "./event-catalog.js";
+import {
+  resolveEventNameHierarchy,
+  type ResolvedEventIdentifier,
+} from "./event-identifiers.js";
 
 function propertyToZod(property: PropertyDefinition): string {
   if (property.enum && !property.allowOtherValues) {
@@ -40,15 +44,21 @@ function eventToZod(event: EventDefinition): string {
   return `${objectSchema}({${properties ? `\n${properties}\n  ` : ""}})${additionalProperties}`;
 }
 
-function commentLines(value: string): string {
+function commentLines(value: string, indentation = "  "): string {
   return value
     .replaceAll("*/", "*\\/")
     .split(/\r?\n/)
-    .map((line) => `   * ${line}`)
+    .map((line) => `${indentation} * ${line}`)
     .join("\n");
 }
 
-function deprecationMessage(event: EventDefinition): string | undefined {
+function deprecationMessage(
+  event: Readonly<{ status: "active" }> | Readonly<{
+    status: "deprecated";
+    deprecatedSince: string;
+    replacement?: string;
+  }>,
+): string | undefined {
   if (event.status !== "deprecated") {
     return undefined;
   }
@@ -58,9 +68,36 @@ function deprecationMessage(event: EventDefinition): string | undefined {
   }`;
 }
 
+function renderEventNameEntry(
+  resolved: ResolvedEventIdentifier,
+  indentation: string,
+): string {
+  const deprecation = deprecationMessage(resolved.event);
+
+  return `${indentation}/**
+${commentLines(resolved.event.description, indentation)}
+${deprecation ? `${indentation} * @deprecated ${deprecation}\n` : ""}${indentation} */
+${indentation}${resolved.key}: ${JSON.stringify(resolved.event.name)},`;
+}
+
+function renderEventNameConstants(events: readonly EventDefinition[]): string {
+  const hierarchy = resolveEventNameHierarchy(events);
+  const rootEntries = hierarchy.root.map((event) =>
+    renderEventNameEntry(event, "  "),
+  );
+  const domainEntries = [...hierarchy.domains].map(
+    ([domain, domainEvents]) => `  ${domain}: {
+${domainEvents.map((event) => renderEventNameEntry(event, "    ")).join("\n")}
+  },`,
+  );
+
+  return [...rootEntries, ...domainEntries].join("\n");
+}
+
 export function renderTypeScriptCatalog(
   events: readonly EventDefinition[],
 ): string {
+  const eventNames = renderEventNameConstants(events);
   const schemas = events
     .map((event) => {
       const deprecation = deprecationMessage(event);
@@ -84,7 +121,7 @@ ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
       }  ${JSON.stringify(event.name)}: {
     description: ${JSON.stringify(event.description)},
     owner: ${JSON.stringify(event.owner)},
-    status: ${JSON.stringify(event.status)},${
+${event.domain ? `    domain: ${JSON.stringify(event.domain)},\n` : ""}${event.key ? `    key: ${JSON.stringify(event.key)},\n` : ""}    status: ${JSON.stringify(event.status)},${
       event.status === "deprecated"
         ? `
     deprecatedSince: ${JSON.stringify(event.deprecatedSince)},${
@@ -103,6 +140,10 @@ ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
 // DO NOT EDIT MANUALLY. Edit events/**/*.json and run pnpm generate.
 
 import { z } from "zod";
+
+export const eventNames = {
+${eventNames}
+} as const;
 
 export const eventSchemas = {
 ${schemas}

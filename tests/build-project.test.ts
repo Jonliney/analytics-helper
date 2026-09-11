@@ -34,7 +34,7 @@ test("renders all targets before writing any artifact", (t) => {
 
   assert.throws(
     () => buildAnalyticsProject(root),
-    /Java class name collision/,
+    /collision/,
   );
   assert.equal(fs.existsSync(path.join(root, "src/generated")), false);
   assert.equal(fs.existsSync(path.join(root, "generated")), false);

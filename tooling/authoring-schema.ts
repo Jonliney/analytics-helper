@@ -1,10 +1,21 @@
 import { z } from "zod";
 
+import { GENERATED_IDENTIFIER_PATTERN } from "./event-identifiers.js";
+
 const EVENT_NAME_PATTERN = /^\S(?:.*\S)?$/;
 const OWNER_PATTERN = /^[a-z][a-z0-9_-]*$/;
 const PROPERTY_NAME_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 
 const descriptionSchema = z.string().min(1);
+const generatedIdentifierSchema = z
+  .string()
+  .regex(
+    GENERATED_IDENTIFIER_PATTERN,
+    "Must be a lower-camel identifier such as auth or signupCompleted",
+  )
+  .describe(
+    "Lower-camel identifier used in generated APIs, such as auth or signupCompleted.",
+  );
 const eventNameSchema = z
   .string()
   .min(1)
@@ -99,6 +110,16 @@ export const authoredPropertyDefinitionSchema = z
 
 const eventDefinitionShape = {
   name: eventNameSchema,
+  domain: generatedIdentifierSchema
+    .optional()
+    .describe(
+      "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
+    ),
+  key: generatedIdentifierSchema
+    .optional()
+    .describe(
+      "Optional eventNames property override. Omit to derive it from the event name.",
+    ),
   description: descriptionSchema,
   owner: z
     .string()
@@ -139,6 +160,8 @@ const deprecatedEventDefinitionSchema = z.strictObject({
 
 const normalizedEventDefinitionShape = {
   name: z.string(),
+  domain: generatedIdentifierSchema.optional(),
+  key: generatedIdentifierSchema.optional(),
   description: z.string(),
   owner: z.string(),
   allowAdditionalProperties: z.boolean(),
@@ -169,6 +192,8 @@ export const authoredEventDefinitionSchema = z
   ])
   .transform((event) => ({
     name: event.name,
+    ...(event.domain === undefined ? {} : { domain: event.domain }),
+    ...(event.key === undefined ? {} : { key: event.key }),
     description: event.description,
     owner: event.owner,
     allowAdditionalProperties: event.allowAdditionalProperties,

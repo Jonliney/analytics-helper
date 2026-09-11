@@ -53,6 +53,50 @@ test("loads multiple events from one product-area file", (t) => {
   assert.deepEqual(result.sources, ["events/auth/auth.json"]);
 });
 
+test("validates eventNames keys within their generated scopes", (t) => {
+  const root = createCatalogFixture(t, {
+    "events.json": [
+      { ...validEvent, name: "Sign Up", domain: "auth" },
+      { ...validEvent, name: "sign_up", domain: "auth" },
+      { ...validEvent, name: "Auth" },
+      {
+        ...validEvent,
+        name: "Password Reset",
+        domain: "auth",
+      },
+    ],
+  });
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    (error: unknown) => {
+      assert.ok(error instanceof CatalogValidationError);
+      assert.match(error.message, /eventNames key collision in domain "auth"/);
+      assert.match(
+        error.message,
+        /Root event "Auth".*conflicts with domain "auth".*different event "key"/,
+      );
+      return true;
+    },
+  );
+});
+
+test("allows the same eventNames key in different domains", (t) => {
+  const root = createCatalogFixture(t, {
+    "events.json": [
+      { ...validEvent, name: "Auth Completed", domain: "auth", key: "completed" },
+      {
+        ...validEvent,
+        name: "Payment Completed",
+        domain: "billing",
+        key: "completed",
+      },
+    ],
+  });
+
+  assert.equal(loadEventCatalog(root).events.length, 2);
+});
+
 test("validates replacement events across the complete catalog", (t) => {
   const root = createCatalogFixture(t, {
     "auth/auth.json": [

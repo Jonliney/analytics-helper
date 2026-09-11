@@ -11,6 +11,7 @@ array of related events.
 ```json
 {
   "name": "Signup Completed",
+  "domain": "auth",
   "description": "User completes account registration",
   "owner": "growth",
   "allowAdditionalProperties": true,
@@ -35,6 +36,11 @@ array of related events.
 - Event names are sent to PostHog exactly as written. Any style is accepted and
   catalogs may mix styles, including `Signup Completed`, `signup_completed`,
   and `signupCompleted`.
+- `domain` optionally groups generated TypeScript names, for example
+  `eventNames.auth.signupCompleted`. Omit it to generate
+  `eventNames.signupCompleted`. Folders and filenames do not affect this API.
+- The event key is derived from `name`. Add an optional lower-camel `key`, such
+  as `"key": "registrationFinished"`, only when you need to override it.
 - `description`, `owner`, and `properties` are required. Owners use lowercase
   identifiers such as `growth` or `identity-platform`.
 - Property names use `snake_case`.
@@ -85,13 +91,13 @@ its company scope.
 
 ```ts
 import posthog from "posthog-js";
-import { createTracker } from "data-system";
+import { createTracker, eventNames } from "data-system";
 
 const track = createTracker((event, properties) =>
   posthog.capture(event, properties),
 );
 
-track("Signup Completed", {
+track(eventNames.auth.signupCompleted, {
   method: "email",
   campaign_id: "spring-launch",
 });
@@ -99,7 +105,9 @@ track("Signup Completed", {
 
 Unknown events, missing required properties, invalid enum values, and unexpected
 properties fail TypeScript checking and runtime validation. Use
-`parseEvent(name, properties)` when validation is needed without capture.
+`parseEvent(name, properties)` when validation is needed without capture. Raw
+event strings remain supported, but `eventNames` provides autocomplete and
+deprecation guidance.
 
 ## Publish privately to npm
 

@@ -27,6 +27,16 @@
               "pattern": "^\\S(?:.*\\S)?$",
               "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
             },
+            "domain": {
+              "description": "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "key": {
+              "description": "Optional eventNames property override. Omit to derive it from the event name.",
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
             "description": {
               "type": "string",
               "minLength": 1
@@ -74,6 +84,16 @@
               "minLength": 1,
               "pattern": "^\\S(?:.*\\S)?$",
               "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
+            },
+            "domain": {
+              "description": "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "key": {
+              "description": "Optional eventNames property override. Omit to derive it from the event name.",
+              "type": "string",
+              "pattern": "^[a-z][A-Za-z0-9]*$"
             },
             "description": {
               "type": "string",

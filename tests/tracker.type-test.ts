@@ -1,12 +1,13 @@
 import {
   createTracker,
+  eventNames,
   type AnalyticsValidationFailure,
 } from "../src/index.js";
 
 const track = createTracker(() => undefined);
 
-track("Signup Completed", { method: "google" });
-track("signup_started", {
+track(eventNames.auth.signupCompleted, { method: "google" });
+track(eventNames.auth.signupStarted, {
   method: "sso",
   experiment_variant: "short-form",
 });
@@ -32,7 +33,7 @@ const propertiesWithAnExtraKey = {
 track("Signup Completed", propertiesWithAnExtraKey);
 
 const strictResultTracker = createTracker(() => "captured" as const);
-const strictResult: "captured" = strictResultTracker("Signup Completed", {
+const strictResult: "captured" = strictResultTracker(eventNames.auth.signupCompleted, {
   method: "email",
 });
 void strictResult;
@@ -54,7 +55,7 @@ const resilientTracker = createTracker(
   },
 );
 const resilientResult: "captured" | "dropped" = resilientTracker(
-  "Signup Completed",
+  eventNames.auth.signupCompleted,
   { method: "google" },
 );
 void resilientResult;

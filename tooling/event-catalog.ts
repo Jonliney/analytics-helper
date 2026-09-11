@@ -7,6 +7,7 @@ import {
   parseAuthoredEventDefinitionFile,
   type EventDefinition,
 } from "./authoring-schema.js";
+import { resolveEventNameHierarchy } from "./event-identifiers.js";
 
 export type {
   EventDefinition,
@@ -177,6 +178,18 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
         `${source}: replacement event ${JSON.stringify(definition.replacement)} is deprecated`,
       );
     }
+  }
+
+  try {
+    resolveEventNameHierarchy(
+      locatedEvents.map(({ definition }) => definition),
+    );
+  } catch (error) {
+    issues.push(
+      ...(error instanceof Error
+        ? error.message.split("\n")
+        : ["generated event identifier validation failed"]),
+    );
   }
 
   if (issues.length > 0) {

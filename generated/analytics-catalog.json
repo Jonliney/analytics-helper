@@ -3,6 +3,7 @@
   "events": [
     {
       "name": "Signup Completed",
+      "domain": "auth",
       "description": "User completes account registration",
       "owner": "product",
       "allowAdditionalProperties": false,
@@ -29,6 +30,7 @@
     },
     {
       "name": "signup_started",
+      "domain": "auth",
       "description": "User begins account registration",
       "owner": "product",
       "allowAdditionalProperties": true,

@@ -48,6 +48,25 @@ const cases: readonly Readonly<{
     valid: true,
   },
   {
+    name: "an event with generated API identifiers",
+    value: {
+      ...baseEvent,
+      domain: "accountSettings",
+      key: "registrationFinished",
+    },
+    valid: true,
+  },
+  {
+    name: "a non-camel domain",
+    value: { ...baseEvent, domain: "account-settings" },
+    valid: false,
+  },
+  {
+    name: "a non-camel key",
+    value: { ...baseEvent, key: "registration_finished" },
+    valid: false,
+  },
+  {
     name: "an empty event name",
     value: { ...baseEvent, name: "" },
     valid: false,
