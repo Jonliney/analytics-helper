@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: pnpm/setup@v2
         with:
           version: 12.3.4
@@ -30,13 +28,6 @@ jobs:
         run: >-
           git diff --exit-code --
           event-definition.schema.json src/generated generated
-      - name: Report analytics contract compatibility
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_REF: ${{ github.event.pull_request.base.sha }}
-        run: >-
-          node --import tsx scripts/check-analytics-compatibility.ts
-          --base-ref "$BASE_REF" --format markdown >> "$GITHUB_STEP_SUMMARY"
       - run: >-
           javac --release 17 -d "$RUNNER_TEMP/java-classes"
           generated/java/com/company/analytics/AnalyticsEvents.java

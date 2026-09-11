@@ -23,7 +23,6 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "validate": "node --import tsx scripts/validate-analytics.ts",
     "generate": "node --import tsx scripts/generate-analytics.ts",
-    "compatibility": "node --import tsx scripts/check-analytics-compatibility.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "pnpm run clean && pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",

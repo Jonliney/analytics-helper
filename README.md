@@ -62,14 +62,14 @@ Active events do not need a `status`. Deprecate an event before removing it:
 }
 ```
 
-`replacement` is optional, but must refer to another active event. CI prevents
-active events from being removed and enforces the deprecation period configured
-in `analytics.config.json`. Removing an event is still a major version change.
+`replacement` is optional, but must refer to another active event. Generated
+TypeScript and Java contracts mark deprecated events for consumers. Git history
+records when events were deprecated or removed.
 
 ## Validate and generate
 
 ```sh
-pnpm validate   # validate event JSON and project configuration
+pnpm validate   # validate event JSON
 pnpm generate   # regenerate every language contract
 pnpm run ci     # build, type-check, and run all tests
 ```
@@ -77,12 +77,6 @@ pnpm run ci     # build, type-check, and run all tests
 Commit event definitions together with `event-definition.schema.json`,
 `src/generated/`, and `generated/`. `dist/` and `node_modules/` are local-only
 and must not be committed.
-
-To inspect the compatibility impact against another Git ref:
-
-```sh
-pnpm compatibility --base-ref main
-```
 
 ## TypeScript usage
 
@@ -114,7 +108,7 @@ properties fail TypeScript checking and runtime validation. Use
 2. In npm, configure that package's trusted publisher for this GitHub repository,
    `.github/workflows/publish.yml`, and the `npm` environment.
 3. Run **Publish analytics package** from GitHub Actions on the default branch.
-   Select `restricted` access and the required version bump.
+   Select `restricted` access and the version increment.
 
 Publishing uses GitHub OIDC, so this repository does not need an npm publishing
 token. A repository that installs the private package does need read access. Add
@@ -151,3 +145,8 @@ The build also generates:
   `generated/java/com/company/analytics/AnalyticsEvents.java`.
 - A language-neutral catalog in `generated/analytics-catalog.json` for Swift and
   future generators.
+
+Java class names are derived from event names. When generating Java, every event
+name must contain at least one ASCII letter or number. Names that cannot form a
+class name, or two names that produce the same class name, fail generation with a
+clear error.

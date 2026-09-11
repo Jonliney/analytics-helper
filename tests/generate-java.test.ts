@@ -55,6 +55,17 @@ test("rejects Java class-name collisions", () => {
   );
 });
 
+test("rejects event names that cannot form a Java class name", () => {
+  const event = events[0]!;
+
+  for (const name of ["🔥", "注册完成"]) {
+    assert.throws(
+      () => renderJavaCatalog([{ ...event, name }]),
+      /event names must contain at least one ASCII letter or number/,
+    );
+  }
+});
+
 test("rejects Java property-name collisions", () => {
   const event = events[0]!;
 
