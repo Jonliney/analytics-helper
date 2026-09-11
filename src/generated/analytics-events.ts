@@ -30,7 +30,7 @@ export const eventSchemas = {
    * Owner: product
    */
   "signup_started": z.object({
-    "method": z.string().describe("Authentication method selected for registration"),
+    "method": (z.string() as z.ZodType<"email" | "google" | "apple" | (string & {}), string>).describe("Authentication method selected for registration"),
   }).catchall(z.unknown()),
 } as const;
 

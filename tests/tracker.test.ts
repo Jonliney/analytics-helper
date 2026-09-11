@@ -59,6 +59,17 @@ test("allows additional properties for events that explicitly opt in", () => {
   );
 });
 
+test("open enum suggestions do not narrow runtime string validation", () => {
+  assert.deepEqual(
+    parseEvent("signup_started", { method: "temporary-provider" }),
+    { method: "temporary-provider" },
+  );
+  assert.throws(
+    () => parseEvent("signup_started", { method: 42 }),
+    /expected string/i,
+  );
+});
+
 test("throws invalid events by default without calling the adapter", () => {
   let adapterCalled = false;
   const track = createTracker(() => {

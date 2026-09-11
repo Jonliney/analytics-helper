@@ -12,6 +12,14 @@ function propertyToZod(property: PropertyDefinition): string {
     return `z.enum([${property.enum.map((value) => JSON.stringify(value)).join(", ")}])`;
   }
 
+  if (property.enum && property.allowOtherValues) {
+    const recommendedValues = property.enum
+      .map((value) => JSON.stringify(value))
+      .join(" | ");
+
+    return `(z.string() as z.ZodType<${recommendedValues} | (string & {}), string>)`;
+  }
+
   switch (property.type) {
     case "string":
       return "z.string()";

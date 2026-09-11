@@ -49,7 +49,8 @@ array of related events.
 - String enums are strict by default.
 - Event-level `allowAdditionalProperties` permits undeclared properties. Omit if not required.
 - Property-level `allowOtherValues` makes a string enum recommended rather than
-  exhaustive. Omit if not required.
+  exhaustive. TypeScript editors still suggest the listed values while allowing
+  other strings. Omit if not required.
 - Duplicate event names and unknown definition fields are rejected.
 
 ## Deprecate an event

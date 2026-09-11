@@ -32,6 +32,15 @@ test("marks deprecated TypeScript event exports", () => {
   assert.match(output, /replacement: "Signup Completed"/);
 });
 
+test("preserves suggestions for open string enums", () => {
+  const output = renderTypeScriptCatalog(events);
+
+  assert.match(
+    output,
+    /z\.string\(\) as z\.ZodType<"email" \| "google" \| "apple" \| \(string & \{\}\), string>/,
+  );
+});
+
 test("rejects colliding TypeScript event constant names", () => {
   const event = events[0]!;
 

@@ -12,6 +12,9 @@ track(eventNames.auth.signupStarted, {
   experiment_variant: "short-form",
 });
 
+const temporaryMethod: string = "temporary-provider";
+track(eventNames.auth.signupStarted, { method: temporaryMethod });
+
 // @ts-expect-error The event is not declared in the catalog.
 track("missing_event", {});
 
