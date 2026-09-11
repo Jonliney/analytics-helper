@@ -53,6 +53,42 @@ array of related events.
   other strings. Omit if not required.
 - Duplicate event names and unknown definition fields are rejected.
 
+## Reuse common properties
+
+Define a shared contract in `property-sets/`. Property set names are globally
+unique, use `snake_case`, and are referenced by name rather than file path.
+
+```json
+{
+  "name": "session_context",
+  "description": "Properties identifying the current session",
+  "owner": "data-platform",
+  "properties": {
+    "session_id": { "type": "string" },
+    "is_authenticated": { "type": "boolean", "optional": true }
+  }
+}
+```
+
+Reference it from any event:
+
+```json
+{
+  "name": "Signup Completed",
+  "description": "User completes account registration",
+  "owner": "growth",
+  "propertySets": ["session_context"],
+  "properties": {
+    "method": { "type": "string" }
+  }
+}
+```
+
+Shared properties are expanded into every generated contract. An unknown set or
+a property duplicated by another set or the event itself fails validation.
+Property sets are flat and cannot reference other sets. They declare properties;
+they do not automatically populate values at tracking time.
+
 ## Deprecate an event
 
 Active events do not need a `status`. Deprecate an event before removing it:
@@ -81,9 +117,9 @@ pnpm generate   # regenerate every language contract
 pnpm run ci     # build, type-check, and run all tests
 ```
 
-Commit event definitions together with `event-definition.schema.json`,
-`src/generated/`, and `generated/`. `dist/` and `node_modules/` are local-only
-and must not be committed.
+Commit definitions together with `event-definition.schema.json`,
+`property-set-definition.schema.json`, `src/generated/`, and `generated/`.
+`dist/` and `node_modules/` are local-only and must not be committed.
 
 ## TypeScript usage
 

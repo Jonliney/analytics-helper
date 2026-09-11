@@ -5,7 +5,9 @@ import { Ajv, type AnySchema } from "ajv";
 
 import {
   authoredEventDefinitionFileSchema,
+  authoredPropertySetDefinitionFileSchema,
   renderEventDefinitionJsonSchema,
+  renderPropertySetDefinitionJsonSchema,
 } from "../tooling/authoring-schema.js";
 
 const baseEvent = {
@@ -55,6 +57,27 @@ const cases: readonly Readonly<{
       key: "registrationFinished",
     },
     valid: true,
+  },
+  {
+    name: "an event with unique property set references",
+    value: {
+      ...baseEvent,
+      propertySets: ["session_context", "experiment_context"],
+    },
+    valid: true,
+  },
+  {
+    name: "an event with duplicate property set references",
+    value: {
+      ...baseEvent,
+      propertySets: ["session_context", "session_context"],
+    },
+    valid: false,
+  },
+  {
+    name: "an event with an invalid property set reference",
+    value: { ...baseEvent, propertySets: ["session-context"] },
+    valid: false,
   },
   {
     name: "a non-camel domain",
@@ -235,6 +258,60 @@ test("Zod and the generated Draft-07 schema accept the same definitions", () => 
       jsonSchemaResult,
       fixture.valid,
       `${fixture.name}: JSON Schema returned ${jsonSchemaResult}; ${ajv.errorsText(validateJsonSchema.errors)}`,
+    );
+  }
+});
+
+test("Zod and the generated property set schema accept the same definitions", () => {
+  const ajv = new Ajv({ allErrors: true, strict: true });
+  const validateJsonSchema = ajv.compile(
+    JSON.parse(renderPropertySetDefinitionJsonSchema()) as AnySchema,
+  );
+  const propertySetCases = [
+    {
+      name: "a property set",
+      value: {
+        name: "session_context",
+        description: "Current session properties",
+        owner: "data-platform",
+        properties: { session_id: { type: "string" } },
+      },
+      valid: true,
+    },
+    {
+      name: "an invalid property set name",
+      value: {
+        name: "session-context",
+        description: "Current session properties",
+        owner: "data-platform",
+        properties: {},
+      },
+      valid: false,
+    },
+    {
+      name: "an undeclared property set field",
+      value: {
+        name: "session_context",
+        description: "Current session properties",
+        owner: "data-platform",
+        properties: {},
+        unexpected: true,
+      },
+      valid: false,
+    },
+  ] as const;
+
+  for (const fixture of propertySetCases) {
+    const zodResult = authoredPropertySetDefinitionFileSchema.safeParse(
+      fixture.value,
+    );
+    const jsonSchemaResult = validateJsonSchema(fixture.value);
+
+    assert.equal(zodResult.success, fixture.valid, fixture.name);
+    assert.equal(
+      jsonSchemaResult,
+      fixture.valid,
+      `${fixture.name}: ${ajv.errorsText(validateJsonSchema.errors)}`,
     );
   }
 });

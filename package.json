@@ -12,12 +12,14 @@
       "import": "./dist/index.js"
     },
     "./catalog.json": "./generated/analytics-catalog.json",
-    "./event-definition.schema.json": "./event-definition.schema.json"
+    "./event-definition.schema.json": "./event-definition.schema.json",
+    "./property-set-definition.schema.json": "./property-set-definition.schema.json"
   },
   "files": [
     "dist",
     "generated/analytics-catalog.json",
-    "event-definition.schema.json"
+    "event-definition.schema.json",
+    "property-set-definition.schema.json"
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",

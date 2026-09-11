@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderEventDefinitionJsonSchema } from "./authoring-schema.js";
-import type { EventDefinition } from "./event-catalog.js";
-import { loadEventCatalog } from "./event-catalog.js";
+import {
+  renderEventDefinitionJsonSchema,
+  renderPropertySetDefinitionJsonSchema,
+} from "./authoring-schema.js";
+import { loadEventCatalog, type EventCatalog } from "./event-catalog.js";
 import {
   renderLanguageNeutralCatalog,
   renderTypeScriptCatalog,
@@ -12,31 +14,37 @@ import { renderJavaCatalog } from "./generate-java.js";
 
 type OutputTarget = Readonly<{
   relativePath: string;
-  render: (events: readonly EventDefinition[]) => string;
+  render: (catalog: EventCatalog) => string;
 }>;
 
 const OUTPUT_TARGETS: readonly OutputTarget[] = [
   {
     relativePath: "event-definition.schema.json",
-    render: renderEventDefinitionJsonSchema,
+    render: () => renderEventDefinitionJsonSchema(),
+  },
+  {
+    relativePath: "property-set-definition.schema.json",
+    render: () => renderPropertySetDefinitionJsonSchema(),
   },
   {
     relativePath: "src/generated/analytics-events.ts",
-    render: renderTypeScriptCatalog,
+    render: ({ events }) => renderTypeScriptCatalog(events),
   },
   {
     relativePath: "generated/analytics-catalog.json",
-    render: renderLanguageNeutralCatalog,
+    render: ({ events, propertySets }) =>
+      renderLanguageNeutralCatalog(events, propertySets),
   },
   {
     relativePath:
       "generated/java/com/company/analytics/AnalyticsEvents.java",
-    render: renderJavaCatalog,
+    render: ({ events }) => renderJavaCatalog(events),
   },
 ];
 
 export type AnalyticsBuildResult = Readonly<{
   eventCount: number;
+  propertySetCount: number;
   artifacts: readonly string[];
 }>;
 
@@ -50,7 +58,7 @@ export function buildAnalyticsProject(
   const catalog = loadEventCatalog(rootDirectory);
   const artifacts = OUTPUT_TARGETS.map((target) => ({
     relativePath: target.relativePath,
-    contents: target.render(catalog.events),
+    contents: target.render(catalog),
   }));
 
   for (const artifact of artifacts) {
@@ -61,6 +69,7 @@ export function buildAnalyticsProject(
 
   return {
     eventCount: catalog.events.length,
+    propertySetCount: catalog.propertySets.length,
     artifacts: artifacts.map(({ relativePath }) => relativePath),
   };
 }

@@ -16,12 +16,19 @@ export const validEvent = {
 export function createCatalogFixture(
   context: TestContext,
   eventFiles: Readonly<Record<string, unknown>>,
+  propertySetFiles: Readonly<Record<string, unknown>> = {},
 ): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "analytics-catalog-"));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   for (const [relativePath, value] of Object.entries(eventFiles)) {
     const file = path.join(root, "events", relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(value));
+  }
+
+  for (const [relativePath, value] of Object.entries(propertySetFiles)) {
+    const file = path.join(root, "property-sets", relativePath);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(value));
   }

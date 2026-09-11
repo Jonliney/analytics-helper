@@ -53,6 +53,123 @@ test("loads multiple events from one product-area file", (t) => {
   assert.deepEqual(result.sources, ["events/auth/auth.json"]);
 });
 
+test("expands reusable property sets into every referencing event", (t) => {
+  const root = createCatalogFixture(
+    t,
+    {
+      "auth/auth.json": [
+        { ...validEvent, propertySets: ["session_context"] },
+        {
+          ...validEvent,
+          name: "Signup Started",
+          propertySets: ["session_context"],
+          properties: {},
+        },
+      ],
+    },
+    {
+      "context.json": {
+        name: "session_context",
+        description: "Properties identifying the current session",
+        owner: "data-platform",
+        properties: {
+          session_id: { type: "string" },
+          is_authenticated: { type: "boolean", optional: true },
+        },
+      },
+    },
+  );
+
+  const catalog = loadEventCatalog(root);
+
+  assert.equal(catalog.propertySets.length, 1);
+  assert.deepEqual(catalog.sources, [
+    "events/auth/auth.json",
+    "property-sets/context.json",
+  ]);
+  for (const event of catalog.events) {
+    assert.deepEqual(event.propertySets, ["session_context"]);
+    assert.equal(event.properties.session_id?.type, "string");
+    assert.equal(event.properties.session_id?.optional, false);
+    assert.equal(event.properties.is_authenticated?.optional, true);
+  }
+});
+
+test("rejects unknown property sets and property collisions", (t) => {
+  const root = createCatalogFixture(
+    t,
+    {
+      "auth/auth.json": {
+        ...validEvent,
+        propertySets: [
+          "session_context",
+          "experiment_context",
+          "missing_context",
+        ],
+        properties: {
+          ...validEvent.properties,
+          session_id: { type: "number" },
+        },
+      },
+    },
+    {
+      "contexts.json": [
+        {
+          name: "session_context",
+          description: "Current session",
+          owner: "data-platform",
+          properties: { session_id: { type: "string" } },
+        },
+        {
+          name: "experiment_context",
+          description: "Current experiment",
+          owner: "data-platform",
+          properties: { session_id: { type: "string" } },
+        },
+      ],
+    },
+  );
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    (error: unknown) => {
+      assert.ok(error instanceof CatalogValidationError);
+      assert.match(error.message, /unknown property set "missing_context"/);
+      assert.match(
+        error.message,
+        /property "session_id" from both property sets "session_context" and "experiment_context"/,
+      );
+      assert.match(
+        error.message,
+        /declares property "session_id".*already provided by property set "session_context"/,
+      );
+      return true;
+    },
+  );
+});
+
+test("rejects duplicate global property set names", (t) => {
+  const propertySet = {
+    name: "session_context",
+    description: "Current session",
+    owner: "data-platform",
+    properties: { session_id: { type: "string" } },
+  };
+  const root = createCatalogFixture(
+    t,
+    { "auth/auth.json": validEvent },
+    {
+      "first.json": propertySet,
+      "nested/second.json": propertySet,
+    },
+  );
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    /duplicate property set name "session_context".*property-sets\/first\.json.*property-sets\/nested\/second\.json/,
+  );
+});
+
 test("validates eventNames keys within their generated scopes", (t) => {
   const root = createCatalogFixture(t, {
     "events.json": [

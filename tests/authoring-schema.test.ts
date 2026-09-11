@@ -5,7 +5,9 @@ import test from "node:test";
 
 import {
   parseAuthoredEventDefinitionFile,
+  parseAuthoredPropertySetDefinitionFile,
   renderEventDefinitionJsonSchema,
+  renderPropertySetDefinitionJsonSchema,
 } from "../tooling/authoring-schema.js";
 import { validEvent } from "./catalog-fixture.js";
 
@@ -23,8 +25,27 @@ test("applies authoring defaults from the schema", () => {
   assert.equal(parsed.status, "active");
   assert.equal(parsed.domain, undefined);
   assert.equal(parsed.key, undefined);
+  assert.deepEqual(parsed.propertySets, []);
   assert.equal(parsed.properties.method?.optional, false);
   assert.equal(parsed.properties.method?.allowOtherValues, false);
+});
+
+test("normalizes reusable property set definitions", () => {
+  const parsed = parseAuthoredPropertySetDefinitionFile({
+    name: "session_context",
+    description: "Properties identifying the current session",
+    owner: "data-platform",
+    properties: {
+      session_id: { type: "string" },
+    },
+  });
+
+  assert.equal(Array.isArray(parsed), false);
+  if (!Array.isArray(parsed)) {
+    assert.equal(parsed.name, "session_context");
+    assert.equal(parsed.properties.session_id?.optional, false);
+    assert.equal(parsed.properties.session_id?.allowOtherValues, false);
+  }
 });
 
 test("preserves optional generated API identifiers", () => {
@@ -71,4 +92,17 @@ test("keeps the checked-in JSON Schema generated from the authoring schema", () 
   assert.match(generatedSchema, /"deprecatedSince"/);
   assert.match(generatedSchema, /"domain"/);
   assert.match(generatedSchema, /"key"/);
+});
+
+test("keeps the property set JSON Schema generated from the authoring schema", () => {
+  const generatedSchema = renderPropertySetDefinitionJsonSchema();
+  const checkedInSchema = fs.readFileSync(
+    path.join(repositoryRoot, "property-set-definition.schema.json"),
+    "utf8",
+  );
+
+  assert.equal(checkedInSchema, generatedSchema);
+  assert.doesNotMatch(generatedSchema, /"readOnly"/);
+  assert.match(generatedSchema, /"propertySetDefinition"/);
+  assert.match(generatedSchema, /"uniqueItems": true/);
 });

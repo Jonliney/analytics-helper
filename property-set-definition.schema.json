@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://company.example/schemas/analytics-property-set-definition.schema.json",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/propertySetDefinition"
+    },
+    {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/propertySetDefinition"
+      }
+    }
+  ],
+  "title": "Analytics property set definition file",
+  "description": "A file may contain one reusable property set or an array of property sets.",
+  "definitions": {
+    "propertySetDefinition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+          "description": "Globally unique property set name referenced by events."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "description": "Team responsible for the shared property contract."
+        },
+        "properties": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/propertyDefinition"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "owner",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "propertyDefinition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "string"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            },
+            "enum": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "allowOtherValues": {
+              "default": false,
+              "description": "Treat enum entries as recommended values rather than an exhaustive set. Defaults to false.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "A string property may optionally declare exhaustive or recommended values.",
+          "dependencies": {
+            "allowOtherValues": [
+              "enum"
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "number"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

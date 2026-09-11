@@ -37,6 +37,16 @@
               "type": "string",
               "pattern": "^[a-z][A-Za-z0-9]*$"
             },
+            "propertySets": {
+              "default": [],
+              "description": "Reusable property sets to include in this event.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+              },
+              "uniqueItems": true
+            },
             "description": {
               "type": "string",
               "minLength": 1
@@ -94,6 +104,16 @@
               "description": "Optional eventNames property override. Omit to derive it from the event name.",
               "type": "string",
               "pattern": "^[a-z][A-Za-z0-9]*$"
+            },
+            "propertySets": {
+              "default": [],
+              "description": "Reusable property sets to include in this event.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+              },
+              "uniqueItems": true
             },
             "description": {
               "type": "string",

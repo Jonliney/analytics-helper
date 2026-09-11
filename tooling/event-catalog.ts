@@ -5,22 +5,27 @@ import { z } from "zod";
 
 import {
   parseAuthoredEventDefinitionFile,
+  parseAuthoredPropertySetDefinitionFile,
   type EventDefinition,
+  type PropertyDefinition,
+  type PropertySetDefinition,
 } from "./authoring-schema.js";
 import { resolveEventNameHierarchy } from "./event-identifiers.js";
 
 export type {
   EventDefinition,
   PropertyDefinition,
+  PropertySetDefinition,
 } from "./authoring-schema.js";
 
-type LocatedEventDefinition = {
-  definition: EventDefinition;
+type LocatedDefinition<Definition> = Readonly<{
+  definition: Definition;
   source: string;
-};
+}>;
 
 export type EventCatalog = Readonly<{
   events: readonly EventDefinition[];
+  propertySets: readonly PropertySetDefinition[];
   sources: readonly string[];
 }>;
 
@@ -66,21 +71,29 @@ function formatSchemaIssue(issue: z.core.$ZodIssue): string {
   return `${location} ${issue.message}`;
 }
 
-export function loadEventCatalog(rootDirectory: string): EventCatalog {
-  const eventsDirectory = path.join(rootDirectory, "events");
-  const issues: string[] = [];
+function readDefinitionFiles<Definition>(
+  rootDirectory: string,
+  directoryName: string,
+  required: boolean,
+  parse: (value: unknown) => readonly Definition[],
+  issues: string[],
+): LocatedDefinition<Definition>[] {
+  const directory = path.join(rootDirectory, directoryName);
 
-  if (!fs.existsSync(eventsDirectory)) {
-    throw new CatalogValidationError(["events/: directory does not exist"]);
+  if (!fs.existsSync(directory)) {
+    if (required) {
+      issues.push(`${directoryName}/: directory does not exist`);
+    }
+    return [];
   }
 
-  const files = findJsonFiles(eventsDirectory);
+  const files = findJsonFiles(directory);
 
-  if (files.length === 0) {
-    issues.push("events/: no event definition JSON files were found");
+  if (required && files.length === 0) {
+    issues.push(`${directoryName}/: no definition JSON files were found`);
   }
 
-  const locatedEvents: LocatedEventDefinition[] = [];
+  const locatedDefinitions: LocatedDefinition<Definition>[] = [];
 
   for (const file of files) {
     const source = path.relative(rootDirectory, file);
@@ -102,11 +115,10 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
       continue;
     }
 
-    let definitions: readonly EventDefinition[];
+    let definitions: readonly Definition[];
 
     try {
-      const parsed = parseAuthoredEventDefinitionFile(value);
-      definitions = Array.isArray(parsed) ? parsed : [parsed];
+      definitions = parse(value);
     } catch (error) {
       if (error instanceof z.ZodError) {
         for (const issue of error.issues) {
@@ -121,41 +133,140 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     }
 
     for (const definition of definitions) {
-      locatedEvents.push({
-        definition,
-        source,
-      });
+      locatedDefinitions.push({ definition, source });
     }
   }
 
+  return locatedDefinitions;
+}
+
+function reportDuplicateNames<Definition extends { name: string }>(
+  definitions: readonly LocatedDefinition<Definition>[],
+  label: string,
+  issues: string[],
+): void {
   const sourcesByName = new Map<string, string[]>();
 
-  for (const event of locatedEvents) {
-    const sources = sourcesByName.get(event.definition.name) ?? [];
-    sources.push(event.source);
-    sourcesByName.set(event.definition.name, sources);
+  for (const { definition, source } of definitions) {
+    const sources = sourcesByName.get(definition.name) ?? [];
+    sources.push(source);
+    sourcesByName.set(definition.name, sources);
   }
 
   for (const [name, sources] of sourcesByName) {
-    if (sources.length > 1) {
-      const sourceCounts = new Map<string, number>();
+    if (sources.length < 2) {
+      continue;
+    }
 
-      for (const source of sources) {
-        sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+    const sourceCounts = new Map<string, number>();
+    for (const source of sources) {
+      sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
+    }
+
+    const locations = [...sourceCounts]
+      .map(([source, count]) =>
+        count === 1 ? source : `${source} (${count} occurrences)`,
+      )
+      .join(", ");
+
+    issues.push(`duplicate ${label} name ${JSON.stringify(name)} in ${locations}`);
+  }
+}
+
+function resolveSharedProperties(
+  locatedEvents: readonly LocatedDefinition<EventDefinition>[],
+  propertySetsByName: ReadonlyMap<string, PropertySetDefinition>,
+  issues: string[],
+): LocatedDefinition<EventDefinition>[] {
+  return locatedEvents.map(({ definition: event, source }) => {
+    const properties: Record<string, PropertyDefinition> = {};
+    const propertyOrigins = new Map<string, string>();
+
+    for (const propertySetName of event.propertySets) {
+      const propertySet = propertySetsByName.get(propertySetName);
+
+      if (!propertySet) {
+        issues.push(
+          `${source}: event ${JSON.stringify(event.name)} references unknown property set ${JSON.stringify(propertySetName)}`,
+        );
+        continue;
       }
 
-      const locations = [...sourceCounts]
-        .map(([source, count]) =>
-          count === 1 ? source : `${source} (${count} occurrences)`,
-        )
-        .join(", ");
+      for (const [propertyName, property] of Object.entries(
+        propertySet.properties,
+      )) {
+        const existingOrigin = propertyOrigins.get(propertyName);
 
-      issues.push(
-        `duplicate event name ${JSON.stringify(name)} in ${locations}`,
-      );
+        if (existingOrigin) {
+          issues.push(
+            `${source}: event ${JSON.stringify(event.name)} receives property ${JSON.stringify(propertyName)} from both property sets ${JSON.stringify(existingOrigin)} and ${JSON.stringify(propertySetName)}`,
+          );
+          continue;
+        }
+
+        properties[propertyName] = property;
+        propertyOrigins.set(propertyName, propertySetName);
+      }
+    }
+
+    for (const [propertyName, property] of Object.entries(event.properties)) {
+      const propertySetName = propertyOrigins.get(propertyName);
+
+      if (propertySetName) {
+        issues.push(
+          `${source}: event ${JSON.stringify(event.name)} declares property ${JSON.stringify(propertyName)}, but it is already provided by property set ${JSON.stringify(propertySetName)}`,
+        );
+        continue;
+      }
+
+      properties[propertyName] = property;
+    }
+
+    return {
+      definition: { ...event, properties },
+      source,
+    };
+  });
+}
+
+export function loadEventCatalog(rootDirectory: string): EventCatalog {
+  const issues: string[] = [];
+  const locatedPropertySets = readDefinitionFiles(
+    rootDirectory,
+    "property-sets",
+    false,
+    (value) => {
+      const parsed = parseAuthoredPropertySetDefinitionFile(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    },
+    issues,
+  );
+  const authoredEvents = readDefinitionFiles(
+    rootDirectory,
+    "events",
+    true,
+    (value) => {
+      const parsed = parseAuthoredEventDefinitionFile(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    },
+    issues,
+  );
+
+  reportDuplicateNames(locatedPropertySets, "property set", issues);
+  reportDuplicateNames(authoredEvents, "event", issues);
+
+  const propertySetsByName = new Map<string, PropertySetDefinition>();
+  for (const { definition } of locatedPropertySets) {
+    if (!propertySetsByName.has(definition.name)) {
+      propertySetsByName.set(definition.name, definition);
     }
   }
 
+  const locatedEvents = resolveSharedProperties(
+    authoredEvents,
+    propertySetsByName,
+    issues,
+  );
   const eventsByName = new Map(
     locatedEvents.map(({ definition }) => [definition.name, definition]),
   );
@@ -199,7 +310,14 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
   const events = locatedEvents
     .map(({ definition }) => definition)
     .sort((left, right) => left.name.localeCompare(right.name));
-  const sources = [...new Set(locatedEvents.map(({ source }) => source))];
+  const propertySets = locatedPropertySets
+    .map(({ definition }) => definition)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const sources = [
+    ...new Set(
+      [...locatedEvents, ...locatedPropertySets].map(({ source }) => source),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
 
-  return { events, sources };
+  return { events, propertySets, sources };
 }
