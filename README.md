@@ -107,8 +107,14 @@ properties fail TypeScript checking and runtime validation. Use
    `@your-company/analytics`, and add the repository URL.
 2. In npm, configure that package's trusted publisher for this GitHub repository,
    `.github/workflows/publish.yml`, and the `npm` environment.
-3. Run **Publish analytics package** from GitHub Actions on the default branch.
-   Select `restricted` access and the version increment.
+3. Run **Prepare analytics release** from GitHub Actions on the default branch
+   and select the version increment. It validates the contracts, commits the new
+   version, and creates a tag.
+4. The tag automatically runs **Publish analytics package**, which publishes
+   with `restricted` access and creates the GitHub release.
+
+If publication fails, rerun its failed job against the same tag; preparing a new
+version is not required.
 
 Publishing uses GitHub OIDC, so this repository does not need an npm publishing
 token. A repository that installs the private package does need read access. Add

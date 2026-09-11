@@ -1,0 +1,79 @@
+name: Prepare analytics release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: Version increment
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-analytics-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 12.3.4
+          install: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check publishing configuration
+        run: |
+          node -e "const p = require('./package.json'); if (!p.name.startsWith('@') || p.name.startsWith('@company/')) throw new Error('Replace the placeholder package name with the real company npm scope.'); if (!p.repository?.url) throw new Error('Set package.json repository.url before publishing with npm trusted publishing.')"
+
+      - name: Increment package version
+        run: npm version "${{ inputs.version_bump }}" --no-git-tag-version
+
+      - name: Validate, build, and test
+        run: pnpm run ci
+
+      - name: Compile generated Java contract
+        run: >-
+          javac --release 17 -d "$RUNNER_TEMP/java-classes"
+          generated/java/com/company/analytics/AnalyticsEvents.java
+
+      - name: Commit and tag the release
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          tag="v${version}"
+          if git rev-parse --verify --quiet "refs/tags/${tag}"; then
+            echo "Release tag ${tag} already exists." >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json event-definition.schema.json src/generated generated
+          git commit -m "chore(release): ${tag}"
+          git tag "$tag"
+          git push --atomic origin "HEAD:${DEFAULT_BRANCH}" "$tag"

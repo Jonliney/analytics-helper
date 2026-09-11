@@ -1,45 +1,20 @@
 name: Publish analytics package
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_bump:
-        description: Version increment
-        required: true
-        default: patch
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      npm_tag:
-        description: npm distribution tag
-        required: true
-        default: latest
-        type: choice
-        options:
-          - latest
-          - next
-      access:
-        description: npm package visibility
-        required: true
-        default: restricted
-        type: choice
-        options:
-          - restricted
-          - public
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
   id-token: write
 
 concurrency:
-  group: publish-analytics-package
+  group: publish-analytics-package-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     environment: npm
     steps:
@@ -66,12 +41,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Check publishing configuration
+      - name: Check release tag and publishing configuration
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          node -e "const p = require('./package.json'); if (!p.name.startsWith('@') || p.name.startsWith('@company/')) throw new Error('Replace the placeholder package name with the real company npm scope.'); if (!p.repository?.url) throw new Error('Set package.json repository.url before publishing with npm trusted publishing.')"
-
-      - name: Increment package version
-        run: npm version "${{ inputs.version_bump }}" --no-git-tag-version
+          node -e "const p = require('./package.json'); if (!p.name.startsWith('@') || p.name.startsWith('@company/')) throw new Error('Replace the placeholder package name with the real company npm scope.'); if (!p.repository?.url) throw new Error('Set package.json repository.url before publishing with npm trusted publishing.'); if ('v' + p.version !== process.env.RELEASE_TAG) throw new Error('Release tag must match package.json version.');"
 
       - name: Validate, build, and test
         run: pnpm run ci
@@ -81,33 +55,31 @@ jobs:
           javac --release 17 -d "$RUNNER_TEMP/java-classes"
           generated/java/com/company/analytics/AnalyticsEvents.java
 
-      - name: Read release version
-        id: package
-        run: echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+      - name: Publish private npm package
+        run: npm publish --access restricted --tag latest
 
-      - name: Commit and tag the release
-        env:
-          VERSION: ${{ steps.package.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json event-definition.schema.json src/generated generated
-          git commit -m "chore(release): v${VERSION}"
-          git tag "v${VERSION}"
-          git push origin "HEAD:${GITHUB_REF_NAME}" --follow-tags
-
-      - name: Publish to npm
-        run: npm publish --access "${{ inputs.access }}" --tag "${{ inputs.npm_tag }}"
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
       - name: Create cross-language release archive
         env:
-          VERSION: ${{ steps.package.outputs.version }}
-        run: |
-          tar -czf "analytics-contracts-${VERSION}.tar.gz" event-definition.schema.json generated/analytics-catalog.json generated/java
+          VERSION: ${{ github.ref_name }}
+        run: >-
+          tar -czf "analytics-contracts-${VERSION#v}.tar.gz"
+          event-definition.schema.json generated/analytics-catalog.json generated/java
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.package.outputs.version }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          gh release create "v${VERSION}" "analytics-contracts-${VERSION}.tar.gz" --generate-notes --title "v${VERSION}"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "GitHub release ${VERSION} already exists."
+            exit 0
+          fi
+          gh release create "$VERSION" \
+            "analytics-contracts-${VERSION#v}.tar.gz" \
+            --generate-notes --title "$VERSION"
