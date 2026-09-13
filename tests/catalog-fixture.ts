@@ -5,6 +5,7 @@ import type { TestContext } from "node:test";
 
 export const validEvent = {
   name: "Signup Completed",
+  key: "signupCompleted",
   description: "A user signs up",
   owner: "growth",
   properties: {

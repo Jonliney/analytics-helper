@@ -24,7 +24,7 @@ test("applies authoring defaults from the schema", () => {
   assert.equal(parsed.allowAdditionalProperties, false);
   assert.equal(parsed.status, "active");
   assert.equal(parsed.domain, undefined);
-  assert.equal(parsed.key, undefined);
+  assert.equal(parsed.key, "signupCompleted");
   assert.deepEqual(parsed.propertySets, []);
   assert.equal(parsed.properties.method?.optional, false);
   assert.equal(parsed.properties.method?.allowOtherValues, false);
@@ -48,7 +48,7 @@ test("normalizes reusable property set definitions", () => {
   }
 });
 
-test("preserves optional generated API identifiers", () => {
+test("preserves generated API identifiers", () => {
   const parsed = parseAuthoredEventDefinitionFile({
     ...validEvent,
     domain: "accountSettings",

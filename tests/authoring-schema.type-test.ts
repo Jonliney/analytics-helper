@@ -23,12 +23,12 @@ const defaultedStatus: "active" | "deprecated" = normalizedEvent.status;
 const defaultedPropertyFlag: boolean =
   normalizedEvent.properties.method!.allowOtherValues;
 const optionalDomain: string | undefined = normalizedEvent.domain;
-const optionalKey: string | undefined = normalizedEvent.key;
+const requiredKey: string = normalizedEvent.key;
 void defaultedFlag;
 void defaultedStatus;
 void defaultedPropertyFlag;
 void optionalDomain;
-void optionalKey;
+void requiredKey;
 
 const invalidNumberProperty: AuthoredPropertyDefinition = {
   type: "number",

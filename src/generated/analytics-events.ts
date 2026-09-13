@@ -39,12 +39,14 @@ export const eventDefinitions = {
     description: "User completes account registration",
     owner: "product",
     domain: "auth",
+    key: "signupCompleted",
     status: "active",
   },
   "signup_started": {
     description: "User begins account registration",
     owner: "product",
     domain: "auth",
+    key: "signupStarted",
     status: "active",
   },
 } as const;

@@ -31,11 +31,6 @@ jobs:
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
 
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 21
-
       - name: Install an OIDC-capable npm CLI
         run: npm install --global npm@^11.15.0
 
@@ -50,11 +45,6 @@ jobs:
       - name: Validate, build, and test
         run: pnpm run ci
 
-      - name: Compile generated Java contract
-        run: >-
-          javac --release 17 -d "$RUNNER_TEMP/java-classes"
-          generated/java/com/company/analytics/AnalyticsEvents.java
-
       - name: Publish private npm package
         run: npm publish --access restricted --tag latest
 
@@ -64,12 +54,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Create cross-language release archive
+      - name: Create contract release archive
         env:
           VERSION: ${{ github.ref_name }}
         run: >-
           tar -czf "analytics-contracts-${VERSION#v}.tar.gz"
-          event-definition.schema.json generated/analytics-catalog.json generated/java
+          event-definition.schema.json property-set-definition.schema.json
+          generated/analytics-catalog.json
 
       - name: Create GitHub release
         env:

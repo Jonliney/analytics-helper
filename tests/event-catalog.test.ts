@@ -15,6 +15,7 @@ test("loads and sorts valid definitions from nested folders", (t) => {
     "billing/payment.json": {
       ...validEvent,
       name: "Payment Completed",
+      key: "paymentCompleted",
     },
   });
 
@@ -39,7 +40,12 @@ test("loads and sorts valid definitions from nested folders", (t) => {
 test("loads multiple events from one product-area file", (t) => {
   const root = createCatalogFixture(t, {
     "auth/auth.json": [
-      { ...validEvent, name: "Signup Started", properties: {} },
+      {
+        ...validEvent,
+        name: "Signup Started",
+        key: "signupStarted",
+        properties: {},
+      },
       validEvent,
     ],
   });
@@ -62,6 +68,7 @@ test("expands reusable property sets into every referencing event", (t) => {
         {
           ...validEvent,
           name: "Signup Started",
+          key: "signupStarted",
           propertySets: ["session_context"],
           properties: {},
         },
@@ -173,13 +180,14 @@ test("rejects duplicate global property set names", (t) => {
 test("validates eventNames keys within their generated scopes", (t) => {
   const root = createCatalogFixture(t, {
     "events.json": [
-      { ...validEvent, name: "Sign Up", domain: "auth" },
-      { ...validEvent, name: "sign_up", domain: "auth" },
-      { ...validEvent, name: "Auth" },
+      { ...validEvent, name: "Sign Up", domain: "auth", key: "signUp" },
+      { ...validEvent, name: "sign_up", domain: "auth", key: "signUp" },
+      { ...validEvent, name: "Auth", key: "auth" },
       {
         ...validEvent,
         name: "Password Reset",
         domain: "auth",
+        key: "passwordReset",
       },
     ],
   });
@@ -201,7 +209,12 @@ test("validates eventNames keys within their generated scopes", (t) => {
 test("allows the same eventNames key in different domains", (t) => {
   const root = createCatalogFixture(t, {
     "events.json": [
-      { ...validEvent, name: "Auth Completed", domain: "auth", key: "completed" },
+      {
+        ...validEvent,
+        name: "Auth Completed",
+        domain: "auth",
+        key: "completed",
+      },
       {
         ...validEvent,
         name: "Payment Completed",
@@ -221,6 +234,7 @@ test("validates replacement events across the complete catalog", (t) => {
       {
         ...validEvent,
         name: "Signup Started",
+        key: "signupStarted",
         status: "deprecated",
         deprecatedSince: "2026-09-01",
         replacement: "Signup Completed",
@@ -244,6 +258,7 @@ test("rejects missing, self-referential, and deprecated replacements", (t) => {
       {
         ...validEvent,
         name: "Missing Replacement Deprecated",
+        key: "missingReplacementDeprecated",
         status: "deprecated",
         deprecatedSince: "2026-09-01",
         replacement: "Does Not Exist",
@@ -251,6 +266,7 @@ test("rejects missing, self-referential, and deprecated replacements", (t) => {
       {
         ...validEvent,
         name: "Self Replacement Deprecated",
+        key: "selfReplacementDeprecated",
         status: "deprecated",
         deprecatedSince: "2026-09-01",
         replacement: "Self Replacement Deprecated",
@@ -258,12 +274,14 @@ test("rejects missing, self-referential, and deprecated replacements", (t) => {
       {
         ...validEvent,
         name: "Deprecated Target",
+        key: "deprecatedTarget",
         status: "deprecated",
         deprecatedSince: "2026-09-01",
       },
       {
         ...validEvent,
         name: "Deprecated Replacement Deprecated",
+        key: "deprecatedReplacementDeprecated",
         status: "deprecated",
         deprecatedSince: "2026-09-01",
         replacement: "Deprecated Target",

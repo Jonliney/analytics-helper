@@ -3,7 +3,7 @@ export const GENERATED_IDENTIFIER_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 type EventIdentifierMetadata = Readonly<{
   name: string;
   domain?: string;
-  key?: string;
+  key: string;
   description: string;
 }>;
 
@@ -26,30 +26,6 @@ export type EventNameHierarchy = Readonly<{
   root: readonly ResolvedEventIdentifier[];
   domains: ReadonlyMap<string, readonly ResolvedEventIdentifier[]>;
 }>;
-
-function deriveEventKey(eventName: string): string | undefined {
-  const words = eventName.match(/[A-Za-z0-9]+/g) ?? [];
-
-  if (words.length === 0) {
-    return undefined;
-  }
-
-  const identifier = words
-    .map((word, index) =>
-      index === 0
-        ? word.charAt(0).toLowerCase() + word.slice(1)
-        : word.charAt(0).toUpperCase() + word.slice(1),
-    )
-    .join("");
-
-  return /^\d/.test(identifier)
-    ? `event${identifier.charAt(0).toUpperCase()}${identifier.slice(1)}`
-    : identifier;
-}
-
-function eventKey(event: IdentifiableEvent): string | undefined {
-  return event.key ?? deriveEventKey(event.name);
-}
 
 /**
  * Resolves the public eventNames paths and rejects ambiguous generated APIs.
@@ -74,24 +50,14 @@ export function resolveEventNameHierarchy(
       continue;
     }
 
-    if (
-      event.key !== undefined &&
-      !GENERATED_IDENTIFIER_PATTERN.test(event.key)
-    ) {
+    if (!GENERATED_IDENTIFIER_PATTERN.test(event.key)) {
       issues.push(
         `Event ${JSON.stringify(event.name)} has invalid key ${JSON.stringify(event.key)}; use a lower-camel identifier such as "signupCompleted"`,
       );
       continue;
     }
 
-    const key = eventKey(event);
-
-    if (!key) {
-      issues.push(
-        `Event ${JSON.stringify(event.name)} cannot generate an eventNames key; add an explicit lower-camel "key"`,
-      );
-      continue;
-    }
+    const key = event.key;
 
     const scope = event.domain ?? "<root>";
     const namesByKey = namesByScopeAndKey.get(scope) ?? new Map<string, string>();
@@ -102,7 +68,7 @@ export function resolveEventNameHierarchy(
         ? `in domain ${JSON.stringify(event.domain)}`
         : "at the root";
       issues.push(
-        `eventNames key collision ${location}: ${JSON.stringify(existingName)} and ${JSON.stringify(event.name)} both resolve to ${JSON.stringify(key)}; set an explicit "key" on one event`,
+        `eventNames key collision ${location}: ${JSON.stringify(existingName)} and ${JSON.stringify(event.name)} both use ${JSON.stringify(key)}; choose a different "key" for one event`,
       );
       continue;
     }

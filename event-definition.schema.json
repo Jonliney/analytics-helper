@@ -25,7 +25,7 @@
               "type": "string",
               "minLength": 1,
               "pattern": "^\\S(?:.*\\S)?$",
-              "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
+              "description": "Event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
             },
             "domain": {
               "description": "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
@@ -33,9 +33,9 @@
               "pattern": "^[a-z][A-Za-z0-9]*$"
             },
             "key": {
-              "description": "Optional eventNames property override. Omit to derive it from the event name.",
               "type": "string",
-              "pattern": "^[a-z][A-Za-z0-9]*$"
+              "pattern": "^[a-z][A-Za-z0-9]*$",
+              "description": "Stable, language-safe identifier used by generated contracts. It is independent of the event name."
             },
             "propertySets": {
               "default": [],
@@ -80,6 +80,7 @@
           },
           "required": [
             "name",
+            "key",
             "description",
             "owner",
             "properties"
@@ -93,7 +94,7 @@
               "type": "string",
               "minLength": 1,
               "pattern": "^\\S(?:.*\\S)?$",
-              "description": "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
+              "description": "Event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed."
             },
             "domain": {
               "description": "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
@@ -101,9 +102,9 @@
               "pattern": "^[a-z][A-Za-z0-9]*$"
             },
             "key": {
-              "description": "Optional eventNames property override. Omit to derive it from the event name.",
               "type": "string",
-              "pattern": "^[a-z][A-Za-z0-9]*$"
+              "pattern": "^[a-z][A-Za-z0-9]*$",
+              "description": "Stable, language-safe identifier used by generated contracts. It is independent of the event name."
             },
             "propertySets": {
               "default": [],
@@ -158,6 +159,7 @@
           },
           "required": [
             "name",
+            "key",
             "description",
             "owner",
             "properties",

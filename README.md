@@ -1,7 +1,7 @@
 # Analytics event contracts
 
 Define analytics events once, validate them in CI, and generate type-safe
-TypeScript, Java, and language-neutral contracts.
+TypeScript and language-neutral contracts.
 
 ## Add or edit an event
 
@@ -12,6 +12,7 @@ array of related events.
 {
   "name": "Signup Completed",
   "domain": "auth",
+  "key": "signupCompleted",
   "description": "User completes account registration",
   "owner": "growth",
   "allowAdditionalProperties": true,
@@ -39,8 +40,9 @@ array of related events.
 - `domain` optionally groups generated TypeScript names, for example
   `eventNames.auth.signupCompleted`. Omit it to generate
   `eventNames.signupCompleted`. Folders and filenames do not affect this API.
-- The event key is derived from `name`. Add an optional lower-camel `key`, such
-  as `"key": "registrationFinished"`, only when you need to override it.
+- `key` is the required, stable programmatic identifier used by generated
+  contracts, such as `signupCompleted`. It must be lower camel case and is
+  intentionally independent of `name`.
 - `description`, `owner`, and `properties` are required. Owners use lowercase
   identifiers such as `growth` or `identity-platform`.
 - Property names use `snake_case`.
@@ -75,6 +77,7 @@ Reference it from any event:
 ```json
 {
   "name": "Signup Completed",
+  "key": "signupCompleted",
   "description": "User completes account registration",
   "owner": "growth",
   "propertySets": ["session_context"],
@@ -96,6 +99,7 @@ Active events do not need a `status`. Deprecate an event before removing it:
 ```json
 {
   "name": "Signup Started",
+  "key": "signupStarted",
   "description": "User begins account registration",
   "owner": "growth",
   "status": "deprecated",
@@ -106,14 +110,14 @@ Active events do not need a `status`. Deprecate an event before removing it:
 ```
 
 `replacement` is optional, but must refer to another active event. Generated
-TypeScript and Java contracts mark deprecated events for consumers. Git history
+TypeScript contracts mark deprecated events for consumers. Git history
 records when events were deprecated or removed.
 
 ## Validate and generate
 
 ```sh
 pnpm validate   # validate event JSON
-pnpm generate   # regenerate every language contract
+pnpm generate   # regenerate all contracts
 pnpm run ci     # build, type-check, and run all tests
 ```
 
@@ -188,16 +192,8 @@ expose it to the install step:
 
 Never commit the token itself.
 
-## Other languages
+## Language-neutral catalog
 
-The build also generates:
-
-- Java 17 records and enums in
-  `generated/java/com/company/analytics/AnalyticsEvents.java`.
-- A language-neutral catalog in `generated/analytics-catalog.json` for Swift and
-  future generators.
-
-Java class names are derived from event names. When generating Java, every event
-name must contain at least one ASCII letter or number. Names that cannot form a
-class name, or two names that produce the same class name, fail generation with a
-clear error.
+The build also generates `generated/analytics-catalog.json`. Other tooling can
+consume this catalog without parsing the TypeScript output. Each event contains
+its exact provider `name`, stable programmatic `key`, and optional `domain`.

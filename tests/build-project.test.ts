@@ -6,7 +6,7 @@ import test from "node:test";
 import { buildAnalyticsProject } from "../tooling/build-project.js";
 import { createCatalogFixture, validEvent } from "./catalog-fixture.js";
 
-test("builds every language artifact through one interface", (t) => {
+test("builds every artifact through one interface", (t) => {
   const root = createCatalogFixture(t, { "auth/auth.json": [validEvent] });
 
   const result = buildAnalyticsProject(root);
@@ -18,7 +18,6 @@ test("builds every language artifact through one interface", (t) => {
     "property-set-definition.schema.json",
     "src/generated/analytics-events.ts",
     "generated/analytics-catalog.json",
-    "generated/java/com/company/analytics/AnalyticsEvents.java",
   ]);
 
   for (const artifact of result.artifacts) {
@@ -74,28 +73,23 @@ test("renders expanded shared properties and traceability metadata", (t) => {
     path.join(root, "src/generated/analytics-events.ts"),
     "utf8",
   );
-  const java = fs.readFileSync(
-    path.join(
-      root,
-      "generated/java/com/company/analytics/AnalyticsEvents.java",
-    ),
-    "utf8",
-  );
   const neutral = JSON.parse(
     fs.readFileSync(
       path.join(root, "generated/analytics-catalog.json"),
       "utf8",
     ),
   ) as {
+    schemaVersion: number;
     propertySets: unknown[];
-    events: Array<{ propertySets: string[]; properties: object }>;
+    events: Array<{ key: string; propertySets: string[]; properties: object }>;
   };
 
   assert.equal(result.propertySetCount, 1);
   assert.match(typescript, /"session_id": z\.string\(\)/);
   assert.match(typescript, /propertySets: \["session_context"\]/);
-  assert.match(java, /String sessionId/);
+  assert.equal(neutral.schemaVersion, 3);
   assert.equal(neutral.propertySets.length, 1);
+  assert.equal(neutral.events[0]?.key, "signupCompleted");
   assert.deepEqual(neutral.events[0]?.propertySets, ["session_context"]);
   assert.equal("session_id" in neutral.events[0]!.properties, true);
 });

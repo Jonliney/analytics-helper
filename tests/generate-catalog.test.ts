@@ -54,18 +54,21 @@ test("rejects colliding TypeScript event constant names", () => {
   );
 });
 
-test("rejects event names that cannot form a TypeScript identifier", () => {
-  assert.throws(
-    () => renderTypeScriptCatalog([{ ...events[0]!, name: "🔥" }]),
-    /cannot generate an eventNames key.*explicit lower-camel "key"/,
-  );
-});
-
-test("groups event names by optional domain and supports key overrides", () => {
+test("groups event names by optional domain and required stable keys", () => {
   const event = events[0]!;
   const output = renderTypeScriptCatalog([
-    { ...event, name: "Application Opened", domain: undefined },
-    { ...event, name: "Signup Completed", domain: "auth" },
+    {
+      ...event,
+      name: "Application Opened",
+      key: "applicationOpened",
+      domain: undefined,
+    },
+    {
+      ...event,
+      name: "Signup Completed",
+      key: "signupCompleted",
+      domain: "auth",
+    },
     {
       ...event,
       name: "Registration Finalized",
@@ -80,7 +83,7 @@ test("groups event names by optional domain and supports key overrides", () => {
   assert.match(output, /signupFinished: "Registration Finalized"/);
 });
 
-test("accepts an explicit key when the event name cannot form one", () => {
+test("uses the key independently of the provider event name", () => {
   const output = renderTypeScriptCatalog([
     { ...events[0]!, name: "🔥", key: "fire", domain: undefined },
   ]);

@@ -10,7 +10,6 @@ import {
   renderLanguageNeutralCatalog,
   renderTypeScriptCatalog,
 } from "./generate-catalog.js";
-import { renderJavaCatalog } from "./generate-java.js";
 
 type OutputTarget = Readonly<{
   relativePath: string;
@@ -34,11 +33,6 @@ const OUTPUT_TARGETS: readonly OutputTarget[] = [
     relativePath: "generated/analytics-catalog.json",
     render: ({ events, propertySets }) =>
       renderLanguageNeutralCatalog(events, propertySets),
-  },
-  {
-    relativePath:
-      "generated/java/com/company/analytics/AnalyticsEvents.java",
-    render: ({ events }) => renderJavaCatalog(events),
   },
 ];
 

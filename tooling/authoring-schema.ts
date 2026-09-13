@@ -22,7 +22,7 @@ const eventNameSchema = z
   .min(1)
   .regex(EVENT_NAME_PATTERN)
   .describe(
-    "Stable event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed.",
+    "Event name sent to the analytics provider exactly as authored. Naming style is unrestricted; surrounding whitespace is not allowed.",
   );
 const optionalSchema = z.boolean().default(false);
 const propertySetNameSchema = z
@@ -130,9 +130,8 @@ const eventDefinitionShape = {
       "Optional top-level group in generated eventNames. Omit to expose the event at the root.",
     ),
   key: generatedIdentifierSchema
-    .optional()
     .describe(
-      "Optional eventNames property override. Omit to derive it from the event name.",
+      "Stable, language-safe identifier used by generated contracts. It is independent of the event name.",
     ),
   propertySets: propertySetReferencesSchema,
   description: descriptionSchema,
@@ -176,7 +175,7 @@ const deprecatedEventDefinitionSchema = z.strictObject({
 const normalizedEventDefinitionShape = {
   name: z.string(),
   domain: generatedIdentifierSchema.optional(),
-  key: generatedIdentifierSchema.optional(),
+  key: generatedIdentifierSchema,
   propertySets: z.array(propertySetNameSchema),
   description: z.string(),
   owner: z.string(),
@@ -209,7 +208,7 @@ export const authoredEventDefinitionSchema = z
   .transform((event) => ({
     name: event.name,
     ...(event.domain === undefined ? {} : { domain: event.domain }),
-    ...(event.key === undefined ? {} : { key: event.key }),
+    key: event.key,
     propertySets: [...event.propertySets],
     description: event.description,
     owner: event.owner,

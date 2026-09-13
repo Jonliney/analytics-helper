@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "propertySets": [],
   "events": [
     {
       "name": "Signup Completed",
       "domain": "auth",
+      "key": "signupCompleted",
       "propertySets": [],
       "description": "User completes account registration",
       "owner": "product",
@@ -33,6 +34,7 @@
     {
       "name": "signup_started",
       "domain": "auth",
+      "key": "signupStarted",
       "propertySets": [],
       "description": "User begins account registration",
       "owner": "product",

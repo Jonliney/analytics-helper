@@ -12,6 +12,7 @@ import {
 
 const baseEvent = {
   name: "Signup Completed",
+  key: "signupCompleted",
   description: "A user completes registration",
   owner: "growth",
   properties: {},
@@ -32,6 +33,11 @@ const cases: readonly Readonly<{
   {
     name: "an event without an owner",
     value: { ...baseEvent, owner: undefined },
+    valid: false,
+  },
+  {
+    name: "an event without a key",
+    value: { ...baseEvent, key: undefined },
     valid: false,
   },
   {

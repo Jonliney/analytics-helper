@@ -130,7 +130,8 @@ ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
       }  ${JSON.stringify(event.name)}: {
     description: ${JSON.stringify(event.description)},
     owner: ${JSON.stringify(event.owner)},
-${event.domain ? `    domain: ${JSON.stringify(event.domain)},\n` : ""}${event.key ? `    key: ${JSON.stringify(event.key)},\n` : ""}${event.propertySets.length > 0 ? `    propertySets: ${JSON.stringify(event.propertySets)},\n` : ""}    status: ${JSON.stringify(event.status)},${
+${event.domain ? `    domain: ${JSON.stringify(event.domain)},\n` : ""}    key: ${JSON.stringify(event.key)},
+${event.propertySets.length > 0 ? `    propertySets: ${JSON.stringify(event.propertySets)},\n` : ""}    status: ${JSON.stringify(event.status)},${
       event.status === "deprecated"
         ? `
     deprecatedSince: ${JSON.stringify(event.deprecatedSince)},${
@@ -183,7 +184,7 @@ export function renderLanguageNeutralCatalog(
 ): string {
   return `${JSON.stringify(
     {
-      schemaVersion: 2,
+      schemaVersion: 3,
       propertySets,
       events,
     },
