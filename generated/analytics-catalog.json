@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "propertySets": [],
   "events": [
     {
@@ -8,7 +8,7 @@
       "key": "signupCompleted",
       "propertySets": [],
       "description": "User completes account registration",
-      "owner": "product",
+      "purpose": "Measure successful registration and acquisition performance",
       "allowAdditionalProperties": false,
       "properties": {
         "method": {
@@ -37,7 +37,6 @@
       "key": "signupStarted",
       "propertySets": [],
       "description": "User begins account registration",
-      "owner": "product",
       "allowAdditionalProperties": true,
       "properties": {
         "method": {

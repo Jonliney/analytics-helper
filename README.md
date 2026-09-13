@@ -14,7 +14,7 @@ array of related events.
   "domain": "auth",
   "key": "signupCompleted",
   "description": "User completes account registration",
-  "owner": "growth",
+  "purpose": "Measure registration conversion and acquisition performance",
   "allowAdditionalProperties": true,
   "properties": {
     "method": {
@@ -43,8 +43,9 @@ array of related events.
 - `key` is the required, stable programmatic identifier used by generated
   contracts, such as `signupCompleted`. It must be lower camel case and is
   intentionally independent of `name`.
-- `description`, `owner`, and `properties` are required. Owners use lowercase
-  identifiers such as `growth` or `identity-platform`.
+- `description` explains what happened. Optional `purpose` explains why the
+  organisation captures the event.
+- `properties` is required, but may be empty.
 - Property names use `snake_case`.
 - Supported property types are `string`, `number`, and `boolean`.
 - Properties are required unless `"optional": true` is set.
@@ -64,7 +65,6 @@ unique, use `snake_case`, and are referenced by name rather than file path.
 {
   "name": "session_context",
   "description": "Properties identifying the current session",
-  "owner": "data-platform",
   "properties": {
     "session_id": { "type": "string" },
     "is_authenticated": { "type": "boolean", "optional": true }
@@ -79,7 +79,6 @@ Reference it from any event:
   "name": "Signup Completed",
   "key": "signupCompleted",
   "description": "User completes account registration",
-  "owner": "growth",
   "propertySets": ["session_context"],
   "properties": {
     "method": { "type": "string" }
@@ -101,7 +100,6 @@ Active events do not need a `status`. Deprecate an event before removing it:
   "name": "Signup Started",
   "key": "signupStarted",
   "description": "User begins account registration",
-  "owner": "growth",
   "status": "deprecated",
   "deprecatedSince": "2026-09-01",
   "replacement": "Signup Completed",

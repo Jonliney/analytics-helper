@@ -55,6 +55,7 @@ test("renders expanded shared properties and traceability metadata", (t) => {
     {
       "auth/auth.json": {
         ...validEvent,
+        purpose: "Measure registration conversion",
         propertySets: ["session_context"],
       },
     },
@@ -62,7 +63,6 @@ test("renders expanded shared properties and traceability metadata", (t) => {
       "session.json": {
         name: "session_context",
         description: "Current session properties",
-        owner: "data-platform",
         properties: { session_id: { type: "string" } },
       },
     },
@@ -81,15 +81,21 @@ test("renders expanded shared properties and traceability metadata", (t) => {
   ) as {
     schemaVersion: number;
     propertySets: unknown[];
-    events: Array<{ key: string; propertySets: string[]; properties: object }>;
+    events: Array<{
+      key: string;
+      purpose?: string;
+      propertySets: string[];
+      properties: object;
+    }>;
   };
 
   assert.equal(result.propertySetCount, 1);
   assert.match(typescript, /"session_id": z\.string\(\)/);
   assert.match(typescript, /propertySets: \["session_context"\]/);
-  assert.equal(neutral.schemaVersion, 3);
+  assert.equal(neutral.schemaVersion, 4);
   assert.equal(neutral.propertySets.length, 1);
   assert.equal(neutral.events[0]?.key, "signupCompleted");
+  assert.equal(neutral.events[0]?.purpose, "Measure registration conversion");
   assert.deepEqual(neutral.events[0]?.propertySets, ["session_context"]);
   assert.equal("session_id" in neutral.events[0]!.properties, true);
 });

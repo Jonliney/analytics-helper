@@ -113,7 +113,6 @@ export function renderTypeScriptCatalog(
 
       return `  /**
 ${commentLines(event.description)}
-   * Owner: ${event.owner.replaceAll("*/", "*\\/")}
 ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
   ${JSON.stringify(event.name)}: ${eventToZod(event)},`;
     })
@@ -129,7 +128,6 @@ ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
           : ""
       }  ${JSON.stringify(event.name)}: {
     description: ${JSON.stringify(event.description)},
-    owner: ${JSON.stringify(event.owner)},
 ${event.domain ? `    domain: ${JSON.stringify(event.domain)},\n` : ""}    key: ${JSON.stringify(event.key)},
 ${event.propertySets.length > 0 ? `    propertySets: ${JSON.stringify(event.propertySets)},\n` : ""}    status: ${JSON.stringify(event.status)},${
       event.status === "deprecated"
@@ -184,7 +182,7 @@ export function renderLanguageNeutralCatalog(
 ): string {
   return `${JSON.stringify(
     {
-      schemaVersion: 3,
+      schemaVersion: 4,
       propertySets,
       events,
     },

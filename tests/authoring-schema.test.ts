@@ -34,7 +34,6 @@ test("normalizes reusable property set definitions", () => {
   const parsed = parseAuthoredPropertySetDefinitionFile({
     name: "session_context",
     description: "Properties identifying the current session",
-    owner: "data-platform",
     properties: {
       session_id: { type: "string" },
     },
@@ -59,6 +58,18 @@ test("preserves generated API identifiers", () => {
   if (!Array.isArray(parsed)) {
     assert.equal(parsed.domain, "accountSettings");
     assert.equal(parsed.key, "registrationFinished");
+  }
+});
+
+test("preserves optional event purpose", () => {
+  const parsed = parseAuthoredEventDefinitionFile({
+    ...validEvent,
+    purpose: "Measure registration conversion",
+  });
+
+  assert.equal(Array.isArray(parsed), false);
+  if (!Array.isArray(parsed)) {
+    assert.equal(parsed.purpose, "Measure registration conversion");
   }
 });
 

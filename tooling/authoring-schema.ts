@@ -3,7 +3,6 @@ import { z } from "zod";
 import { GENERATED_IDENTIFIER_PATTERN } from "./event-identifiers.js";
 
 const EVENT_NAME_PATTERN = /^\S(?:.*\S)?$/;
-const OWNER_PATTERN = /^[a-z][a-z0-9_-]*$/;
 const PROPERTY_NAME_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 const PROPERTY_SET_NAME_PATTERN = PROPERTY_NAME_PATTERN;
 
@@ -135,10 +134,9 @@ const eventDefinitionShape = {
     ),
   propertySets: propertySetReferencesSchema,
   description: descriptionSchema,
-  owner: z
-    .string()
-    .regex(OWNER_PATTERN)
-    .describe("Team responsible for the event definition."),
+  purpose: descriptionSchema
+    .optional()
+    .describe("Optional explanation of why the event is captured."),
   allowAdditionalProperties: z
     .boolean()
     .default(false)
@@ -178,7 +176,7 @@ const normalizedEventDefinitionShape = {
   key: generatedIdentifierSchema,
   propertySets: z.array(propertySetNameSchema),
   description: z.string(),
-  owner: z.string(),
+  purpose: z.string().optional(),
   allowAdditionalProperties: z.boolean(),
   properties: z
     .record(z.string(), normalizedPropertyDefinitionSchema)
@@ -211,7 +209,7 @@ export const authoredEventDefinitionSchema = z
     key: event.key,
     propertySets: [...event.propertySets],
     description: event.description,
-    owner: event.owner,
+    ...(event.purpose === undefined ? {} : { purpose: event.purpose }),
     allowAdditionalProperties: event.allowAdditionalProperties,
     properties: event.properties,
     status: event.status,
@@ -248,10 +246,6 @@ const propertySetDefinitionShape = {
     "Globally unique property set name referenced by events.",
   ),
   description: descriptionSchema,
-  owner: z
-    .string()
-    .regex(OWNER_PATTERN)
-    .describe("Team responsible for the shared property contract."),
   properties: z
     .record(
       z.string().regex(PROPERTY_NAME_PATTERN),

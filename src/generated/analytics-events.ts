@@ -19,7 +19,6 @@ export const eventNames = {
 export const eventSchemas = {
   /**
    * User completes account registration
-   * Owner: product
    */
   "Signup Completed": z.strictObject({
     "method": z.enum(["email", "google", "apple"]).describe("Authentication method used for registration"),
@@ -27,7 +26,6 @@ export const eventSchemas = {
   }),
   /**
    * User begins account registration
-   * Owner: product
    */
   "signup_started": z.object({
     "method": (z.string() as z.ZodType<"email" | "google" | "apple" | (string & {}), string>).describe("Authentication method selected for registration"),
@@ -37,14 +35,12 @@ export const eventSchemas = {
 export const eventDefinitions = {
   "Signup Completed": {
     description: "User completes account registration",
-    owner: "product",
     domain: "auth",
     key: "signupCompleted",
     status: "active",
   },
   "signup_started": {
     description: "User begins account registration",
-    owner: "product",
     domain: "auth",
     key: "signupStarted",
     status: "active",

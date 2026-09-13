@@ -28,11 +28,6 @@
           "type": "string",
           "minLength": 1
         },
-        "owner": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_-]*$",
-          "description": "Team responsible for the shared property contract."
-        },
         "properties": {
           "type": "object",
           "propertyNames": {
@@ -47,7 +42,6 @@
       "required": [
         "name",
         "description",
-        "owner",
         "properties"
       ],
       "additionalProperties": false

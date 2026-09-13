@@ -51,10 +51,10 @@
               "type": "string",
               "minLength": 1
             },
-            "owner": {
+            "purpose": {
+              "description": "Optional explanation of why the event is captured.",
               "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$",
-              "description": "Team responsible for the event definition."
+              "minLength": 1
             },
             "allowAdditionalProperties": {
               "default": false,
@@ -82,7 +82,6 @@
             "name",
             "key",
             "description",
-            "owner",
             "properties"
           ],
           "additionalProperties": false
@@ -120,10 +119,10 @@
               "type": "string",
               "minLength": 1
             },
-            "owner": {
+            "purpose": {
+              "description": "Optional explanation of why the event is captured.",
               "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$",
-              "description": "Team responsible for the event definition."
+              "minLength": 1
             },
             "allowAdditionalProperties": {
               "default": false,
@@ -161,7 +160,6 @@
             "name",
             "key",
             "description",
-            "owner",
             "properties",
             "status",
             "deprecatedSince"

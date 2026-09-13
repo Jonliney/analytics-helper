@@ -78,7 +78,6 @@ test("expands reusable property sets into every referencing event", (t) => {
       "context.json": {
         name: "session_context",
         description: "Properties identifying the current session",
-        owner: "data-platform",
         properties: {
           session_id: { type: "string" },
           is_authenticated: { type: "boolean", optional: true },
@@ -124,13 +123,11 @@ test("rejects unknown property sets and property collisions", (t) => {
         {
           name: "session_context",
           description: "Current session",
-          owner: "data-platform",
           properties: { session_id: { type: "string" } },
         },
         {
           name: "experiment_context",
           description: "Current experiment",
-          owner: "data-platform",
           properties: { session_id: { type: "string" } },
         },
       ],
@@ -159,7 +156,6 @@ test("rejects duplicate global property set names", (t) => {
   const propertySet = {
     name: "session_context",
     description: "Current session",
-    owner: "data-platform",
     properties: { session_id: { type: "string" } },
   };
   const root = createCatalogFixture(

@@ -10,7 +10,7 @@ const authoredEvent: AuthoredEventDefinition = {
   domain: "auth",
   key: "signupFinished",
   description: "A user completes registration",
-  owner: "growth",
+  purpose: "Measure registration conversion",
   properties: {
     method: { type: "string", enum: ["email", "google"] },
   },
@@ -24,11 +24,13 @@ const defaultedPropertyFlag: boolean =
   normalizedEvent.properties.method!.allowOtherValues;
 const optionalDomain: string | undefined = normalizedEvent.domain;
 const requiredKey: string = normalizedEvent.key;
+const optionalPurpose: string | undefined = normalizedEvent.purpose;
 void defaultedFlag;
 void defaultedStatus;
 void defaultedPropertyFlag;
 void optionalDomain;
 void requiredKey;
+void optionalPurpose;
 
 const invalidNumberProperty: AuthoredPropertyDefinition = {
   type: "number",

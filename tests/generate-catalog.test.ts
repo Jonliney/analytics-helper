@@ -41,6 +41,13 @@ test("preserves suggestions for open string enums", () => {
   );
 });
 
+test("keeps purpose out of runtime TypeScript metadata", () => {
+  const output = renderTypeScriptCatalog(events);
+
+  assert.doesNotMatch(output, /purpose:/);
+  assert.doesNotMatch(output, /Measure successful registration/);
+});
+
 test("rejects colliding TypeScript event constant names", () => {
   const event = events[0]!;
 

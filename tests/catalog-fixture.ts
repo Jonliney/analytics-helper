@@ -7,7 +7,6 @@ export const validEvent = {
   name: "Signup Completed",
   key: "signupCompleted",
   description: "A user signs up",
-  owner: "growth",
   properties: {
     method: { type: "string", enum: ["email", "google"] },
     campaign_id: { type: "string", optional: true },

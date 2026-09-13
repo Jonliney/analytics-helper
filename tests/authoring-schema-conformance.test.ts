@@ -14,7 +14,6 @@ const baseEvent = {
   name: "Signup Completed",
   key: "signupCompleted",
   description: "A user completes registration",
-  owner: "growth",
   properties: {},
 };
 
@@ -30,11 +29,6 @@ const cases: readonly Readonly<{
     valid: true,
   },
   { name: "an empty event array", value: [], valid: false },
-  {
-    name: "an event without an owner",
-    value: { ...baseEvent, owner: undefined },
-    valid: false,
-  },
   {
     name: "an event without a key",
     value: { ...baseEvent, key: undefined },
@@ -106,13 +100,23 @@ const cases: readonly Readonly<{
     valid: false,
   },
   {
-    name: "an invalid owner",
-    value: { ...baseEvent, owner: "Growth Team" },
+    name: "an empty description",
+    value: { ...baseEvent, description: "" },
     valid: false,
   },
   {
-    name: "an empty description",
-    value: { ...baseEvent, description: "" },
+    name: "an event with a purpose",
+    value: { ...baseEvent, purpose: "Measure registration conversion" },
+    valid: true,
+  },
+  {
+    name: "an empty purpose",
+    value: { ...baseEvent, purpose: "" },
+    valid: false,
+  },
+  {
+    name: "a legacy owner field",
+    value: { ...baseEvent, owner: "growth" },
     valid: false,
   },
   {
@@ -279,7 +283,6 @@ test("Zod and the generated property set schema accept the same definitions", ()
       value: {
         name: "session_context",
         description: "Current session properties",
-        owner: "data-platform",
         properties: { session_id: { type: "string" } },
       },
       valid: true,
@@ -289,7 +292,6 @@ test("Zod and the generated property set schema accept the same definitions", ()
       value: {
         name: "session-context",
         description: "Current session properties",
-        owner: "data-platform",
         properties: {},
       },
       valid: false,
@@ -299,7 +301,6 @@ test("Zod and the generated property set schema accept the same definitions", ()
       value: {
         name: "session_context",
         description: "Current session properties",
-        owner: "data-platform",
         properties: {},
         unexpected: true,
       },
