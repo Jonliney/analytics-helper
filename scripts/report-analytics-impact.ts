@@ -4,8 +4,10 @@ import { pathToFileURL } from "node:url";
 import { loadEventCatalog } from "../tooling/event-catalog.js";
 import { LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION } from "../tooling/generate-catalog.js";
 import {
-  comparePropertySetImpact,
-  formatPropertySetImpactReport,
+  compareAnalyticsImpact,
+  formatAnalyticsImpactReport,
+} from "../tooling/analytics-impact.js";
+import {
   impactCatalogFromEventCatalog,
   parseImpactCatalog,
 } from "../tooling/property-set-impact.js";
@@ -18,11 +20,11 @@ type CommandOptions = Readonly<{
 
 const USAGE = `Usage: pnpm impact [--base <git-ref>] [--json]
 
-Reports property-set changes and the events and domains they affect.
+Reports event and property-set changes relative to a committed catalog.
 
 Options:
   --base <git-ref>  Compare with the catalog committed at this ref (default: HEAD)
-  --json            Print the complete report as JSON
+  --json            Print the complete report as JSON instead of Markdown
   --help            Show this help`;
 
 export function parseCommandOptions(args: readonly string[]): CommandOptions {
@@ -97,11 +99,11 @@ export function run(args: readonly string[], rootDirectory: string): string {
     loadEventCatalog(rootDirectory),
     LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION,
   );
-  const report = comparePropertySetImpact(previous, proposed, options.base);
+  const report = compareAnalyticsImpact(previous, proposed, options.base);
 
   return options.json
     ? JSON.stringify(report, null, 2)
-    : formatPropertySetImpactReport(report);
+    : formatAnalyticsImpactReport(report);
 }
 
 if (

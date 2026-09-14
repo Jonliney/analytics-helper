@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { buildAnalyticsProject } from "../tooling/build-project.js";
+import { LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION } from "../tooling/generate-catalog.js";
 import { createCatalogFixture, validEvent } from "./catalog-fixture.js";
 
 test("builds every artifact through one interface", (t) => {
@@ -92,7 +93,10 @@ test("renders expanded shared properties and traceability metadata", (t) => {
   assert.equal(result.propertySetCount, 1);
   assert.match(typescript, /"session_id": z\.string\(\)/);
   assert.match(typescript, /propertySets: \["session_context"\]/);
-  assert.equal(neutral.schemaVersion, 4);
+  assert.equal(
+    neutral.schemaVersion,
+    LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION,
+  );
   assert.equal(neutral.propertySets.length, 1);
   assert.equal(neutral.events[0]?.key, "signupCompleted");
   assert.equal(neutral.events[0]?.purpose, "Measure registration conversion");

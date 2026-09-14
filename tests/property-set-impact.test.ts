@@ -132,6 +132,28 @@ test("classifies restrictive enum changes as breaking", () => {
   assert.equal(report.impacts[0]?.properties[0]?.classification, "breaking");
 });
 
+test("reports property-set description changes as metadata", () => {
+  const previous = catalog([
+    {
+      name: "session_context",
+      description: "Session details",
+      properties: {},
+    },
+  ]);
+  const proposed = catalog([
+    {
+      name: "session_context",
+      description: "Context for the current session",
+      properties: {},
+    },
+  ]);
+
+  const report = comparePropertySetImpact(previous, proposed, "HEAD");
+
+  assert.equal(report.recommendedVersionBump, "patch");
+  assert.equal(report.impacts[0]?.fields[0]?.field, "description");
+});
+
 test("returns an empty informational report when property sets are unchanged", () => {
   const unchanged = catalog([]);
   const report = comparePropertySetImpact(unchanged, unchanged, "HEAD");

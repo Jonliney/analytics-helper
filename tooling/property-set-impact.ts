@@ -12,6 +12,7 @@ const impactPropertySchema = z.object({
 
 const impactPropertySetSchema = z.object({
   name: z.string(),
+  description: z.string().optional(),
   properties: z.record(z.string(), impactPropertySchema),
 });
 
@@ -20,6 +21,13 @@ const impactEventSchema = z.object({
   domain: z.string().optional(),
   key: z.string().optional(),
   propertySets: z.array(z.string()).default([]),
+  description: z.string().optional(),
+  purpose: z.string().optional(),
+  allowAdditionalProperties: z.boolean().default(false),
+  properties: z.record(z.string(), impactPropertySchema).default({}),
+  status: z.enum(["active", "deprecated"]).default("active"),
+  deprecatedSince: z.string().optional(),
+  replacement: z.string().optional(),
 });
 
 const impactCatalogSchema = z.object({
@@ -29,6 +37,7 @@ const impactCatalogSchema = z.object({
 });
 
 export type ImpactCatalog = z.output<typeof impactCatalogSchema>;
+export type ImpactEvent = ImpactCatalog["events"][number];
 export type ImpactClassification = "breaking" | "additive" | "metadata";
 export type RecommendedVersionBump = "major" | "minor" | "patch" | "none";
 
@@ -51,6 +60,11 @@ export type PropertySetImpact = Readonly<{
   propertySet: string;
   change: "added" | "removed" | "changed";
   classification: ImpactClassification;
+  fields: readonly Readonly<{
+    field: "description";
+    classification: "metadata";
+    summary: string;
+  }>[];
   properties: readonly PropertyImpact[];
   affectedEvents: readonly AffectedEvent[];
   affectedDomains: readonly string[];
@@ -178,7 +192,7 @@ function changedPropertyImpact(
   };
 }
 
-function compareProperties(
+export function comparePropertyDefinitions(
   before: Readonly<Record<string, PropertyDefinition>>,
   after: Readonly<Record<string, PropertyDefinition>>,
 ): PropertyImpact[] {
@@ -298,10 +312,11 @@ export function comparePropertySetImpact(
           previous,
           proposed,
         );
-        const properties = compareProperties({}, after.properties).map((impact) =>
-          changesExistingContract
-            ? impact
-            : { ...impact, classification: "additive" as const },
+        const properties = comparePropertyDefinitions({}, after.properties).map(
+          (impact) =>
+            changesExistingContract
+              ? impact
+              : { ...impact, classification: "additive" as const },
         );
         return [
           {
@@ -313,6 +328,7 @@ export function comparePropertySetImpact(
                 : highestClassification(
                     properties.map((property) => property.classification),
                   ),
+            fields: [],
             properties,
             affectedEvents: events,
             affectedDomains: affectedDomains(events),
@@ -326,15 +342,29 @@ export function comparePropertySetImpact(
             propertySet: propertySetName,
             change: "removed",
             classification: "breaking",
-            properties: compareProperties(before.properties, {}),
+            fields: [],
+            properties: comparePropertyDefinitions(before.properties, {}),
             affectedEvents: events,
             affectedDomains: affectedDomains(events),
           },
         ];
       }
 
-      const properties = compareProperties(before!.properties, after!.properties);
-      if (properties.length === 0) {
+      const properties = comparePropertyDefinitions(
+        before!.properties,
+        after!.properties,
+      );
+      const fields =
+        before!.description === after!.description
+          ? []
+          : [
+              {
+                field: "description" as const,
+                classification: "metadata" as const,
+                summary: "Description changed",
+              },
+            ];
+      if (properties.length === 0 && fields.length === 0) {
         return [];
       }
 
@@ -343,8 +373,12 @@ export function comparePropertySetImpact(
           propertySet: propertySetName,
           change: "changed",
           classification: highestClassification(
-            properties.map((property) => property.classification),
+            [
+              ...fields.map((field) => field.classification),
+              ...properties.map((property) => property.classification),
+            ],
           ),
+          fields,
           properties,
           affectedEvents: events,
           affectedDomains: affectedDomains(events),
@@ -384,12 +418,15 @@ export function formatPropertySetImpactReport(
   }
 
   const sections = report.impacts.map((impact) => {
-    const properties = impact.properties
-      .map(
+    const changes = [
+      ...impact.fields.map(
+        (field) => `  ~ ${field.field}: ${field.summary} [metadata]`,
+      ),
+      ...impact.properties.map(
         (property) =>
           `  ${property.change === "added" ? "+" : property.change === "removed" ? "-" : "~"} ${property.property}: ${property.summary.join("; ")} [${property.classification}]`,
-      )
-      .join("\n");
+      ),
+    ].join("\n");
     const events =
       impact.affectedEvents.length === 0
         ? "  None"
@@ -403,8 +440,8 @@ export function formatPropertySetImpactReport(
 
     return `Property set ${JSON.stringify(impact.propertySet)} ${impact.change} [${impact.classification}]
 
-Properties:
-${properties || "  None"}
+Changes:
+${changes || "  None"}
 
 Affected events (${impact.affectedEvents.length}):
 ${events}
