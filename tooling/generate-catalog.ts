@@ -2,13 +2,15 @@ import type {
   EventDefinition,
   PropertyDefinition,
   PropertySetDefinition,
+  UserTraitsDefinition,
+  ViewDefinition,
 } from "./event-catalog.js";
 import {
   resolveEventNameHierarchy,
   type ResolvedEventIdentifier,
 } from "./event-identifiers.js";
 
-export const LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION = 1;
+export const LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION = 2;
 
 function propertyToZod(property: PropertyDefinition): string {
   if (property.enum && !property.allowOtherValues) {
@@ -33,26 +35,32 @@ function propertyToZod(property: PropertyDefinition): string {
   }
 }
 
-function eventToZod(event: EventDefinition): string {
-  const properties = Object.entries(event.properties)
+function propertiesToZod(
+  propertiesDefinition: Readonly<Record<string, PropertyDefinition>>,
+  allowAdditionalProperties: boolean,
+  propertyIndentation = "    ",
+): string {
+  const properties = Object.entries(propertiesDefinition)
     .map(([name, definition]) => {
       const schema = `${propertyToZod(definition)}${definition.optional ? ".optional()" : ""}`;
       const description = definition.description
         ? `.describe(${JSON.stringify(definition.description)})`
         : "";
 
-      return `    ${JSON.stringify(name)}: ${schema}${description},`;
+      return `${propertyIndentation}${JSON.stringify(name)}: ${schema}${description},`;
     })
     .join("\n");
 
-  const objectSchema = event.allowAdditionalProperties
+  const objectSchema = allowAdditionalProperties
     ? "z.object"
     : "z.strictObject";
-  const additionalProperties = event.allowAdditionalProperties
+  const additionalProperties = allowAdditionalProperties
     ? ".catchall(z.unknown())"
     : "";
 
-  return `${objectSchema}({${properties ? `\n${properties}\n  ` : ""}})${additionalProperties}`;
+  const closingIndentation = propertyIndentation.slice(0, -2);
+
+  return `${objectSchema}({${properties ? `\n${properties}\n${closingIndentation}` : ""}})${additionalProperties}`;
 }
 
 function commentLines(value: string, indentation = "  "): string {
@@ -109,6 +117,8 @@ ${domainEvents.map((event) => renderEventNameEntry(event, "    ")).join("\n")}
 
 export function renderTypeScriptCatalog(
   events: readonly EventDefinition[],
+  views: readonly ViewDefinition[] = [],
+  userTraits?: UserTraitsDefinition,
 ): string {
   const eventNames = renderEventNameConstants(events);
   const schemas = events
@@ -118,7 +128,7 @@ export function renderTypeScriptCatalog(
       return `  /**
 ${commentLines(event.description)}
 ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
-  ${JSON.stringify(event.name)}: ${eventToZod(event)},`;
+  ${JSON.stringify(event.name)}: ${propertiesToZod(event.properties, event.allowAdditionalProperties)},`;
     })
     .join("\n");
 
@@ -146,8 +156,30 @@ ${event.propertySets.length > 0 ? `    propertySets: ${JSON.stringify(event.prop
     })
     .join("\n");
 
+  const viewNameEntries = views
+    .map(
+      (view) => `  /**
+${commentLines(view.description)}
+   */
+  ${view.key}: ${JSON.stringify(view.name)},`,
+    )
+    .join("\n");
+  const viewSchemas = views
+    .map(
+      (view) => `  /**
+${commentLines(view.description)}
+   */
+  ${JSON.stringify(view.name)}: ${propertiesToZod(view.properties, view.allowAdditionalProperties)},`,
+    )
+    .join("\n");
+  const userTraitsSchema = propertiesToZod(
+    userTraits?.traits ?? {},
+    userTraits?.allowAdditionalTraits ?? false,
+    "  ",
+  );
+
   return `// AUTO-GENERATED FILE.
-// DO NOT EDIT MANUALLY. Edit events/**/*.json and run pnpm generate.
+// DO NOT EDIT MANUALLY. Edit src/definitions/**/*.json and run pnpm generate.
 
 import { z } from "zod";
 
@@ -163,6 +195,16 @@ export const eventDefinitions = {
 ${definitions}
 } as const;
 
+export const viewNames = {
+${viewNameEntries}
+} as const;
+
+export const viewSchemas = {
+${viewSchemas}
+} as const;
+
+export const userTraitsSchema = ${userTraitsSchema};
+
 export type AnalyticsEventName = keyof typeof eventSchemas;
 
 export type AnalyticsEvents = {
@@ -175,17 +217,29 @@ export type AnalyticsEvent = {
     properties: AnalyticsEvents[Name];
   };
 }[AnalyticsEventName];
+
+export type AnalyticsViewName = keyof typeof viewSchemas;
+
+export type AnalyticsViews = {
+  [Name in AnalyticsViewName]: z.infer<(typeof viewSchemas)[Name]>;
+};
+
+export type UserTraits = z.infer<typeof userTraitsSchema>;
 `;
 }
 
 export function renderLanguageNeutralCatalog(
   events: readonly EventDefinition[],
   propertySets: readonly PropertySetDefinition[] = [],
+  views: readonly ViewDefinition[] = [],
+  userTraits?: UserTraitsDefinition,
 ): string {
   return `${JSON.stringify(
     {
       schemaVersion: LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION,
       propertySets,
+      userTraits: userTraits ?? null,
+      views,
       events,
     },
     null,

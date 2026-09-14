@@ -14,9 +14,13 @@ test("builds every artifact through one interface", (t) => {
 
   assert.equal(result.eventCount, 1);
   assert.equal(result.propertySetCount, 0);
+  assert.equal(result.viewCount, 0);
+  assert.equal(result.hasUserTraits, false);
   assert.deepEqual(result.artifacts, [
     "event-definition.schema.json",
     "property-set-definition.schema.json",
+    "user-traits-definition.schema.json",
+    "view-definition.schema.json",
     "src/generated/analytics-events.ts",
     "generated/analytics-catalog.json",
   ]);
@@ -48,6 +52,57 @@ test("renders all targets before writing any artifact", (t) => {
     fs.existsSync(path.join(root, "property-set-definition.schema.json")),
     false,
   );
+  assert.equal(
+    fs.existsSync(path.join(root, "user-traits-definition.schema.json")),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(path.join(root, "view-definition.schema.json")),
+    false,
+  );
+});
+
+test("builds typed user-trait and view contracts", (t) => {
+  const root = createCatalogFixture(
+    t,
+    { "auth/auth.json": validEvent },
+    {},
+    {
+      "app.json": {
+        name: "Settings",
+        key: "settings",
+        description: "User views settings",
+        properties: {
+          section: { type: "string", enum: ["profile", "security"] },
+        },
+      },
+    },
+    {
+      "user.json": {
+        description: "Durable user traits",
+        traits: {
+          plan: { type: "string", enum: ["free", "pro"], optional: true },
+        },
+      },
+    },
+  );
+
+  const result = buildAnalyticsProject(root);
+  const typescript = fs.readFileSync(
+    path.join(root, "src/generated/analytics-events.ts"),
+    "utf8",
+  );
+  const neutral = JSON.parse(
+    fs.readFileSync(path.join(root, "generated/analytics-catalog.json"), "utf8"),
+  ) as { userTraits: unknown; views: unknown[] };
+
+  assert.equal(result.viewCount, 1);
+  assert.equal(result.hasUserTraits, true);
+  assert.match(typescript, /settings: "Settings"/);
+  assert.match(typescript, /"Settings": z\.strictObject/);
+  assert.match(typescript, /"plan": z\.enum\(\["free", "pro"\]\)\.optional\(\)/);
+  assert.notEqual(neutral.userTraits, null);
+  assert.equal(neutral.views.length, 1);
 });
 
 test("renders expanded shared properties and traceability metadata", (t) => {

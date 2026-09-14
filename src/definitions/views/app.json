@@ -1,0 +1,13 @@
+{
+  "name": "Integration Example",
+  "key": "integrationExample",
+  "description": "User views the React integration example",
+  "properties": {
+    "source": {
+      "type": "string",
+      "description": "How the user reached the view",
+      "enum": ["direct", "documentation"],
+      "optional": true
+    }
+  }
+}

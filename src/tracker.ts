@@ -3,6 +3,7 @@ import {
   type AnalyticsEventName,
   type AnalyticsEvents,
 } from "./generated/analytics-events.js";
+import type { ContractProperties } from "./contract-properties.js";
 
 export type CaptureFunction<Result = unknown> = (
   event: string,
@@ -19,12 +20,13 @@ export type TrackerOptions<InvalidResult = void> = Readonly<{
   onInvalid: (failure: AnalyticsValidationFailure) => InvalidResult;
 }>;
 
-type WithoutExtraProperties<Expected, Candidate> = Candidate &
-  Record<Exclude<keyof Candidate, keyof Expected>, never>;
-
-type TrackProperties<Expected, Candidate> = string extends keyof Expected
-  ? Expected
-  : WithoutExtraProperties<Expected, Candidate>;
+export type Tracker<Result = unknown> = <
+  Name extends AnalyticsEventName,
+  Properties extends AnalyticsEvents[Name],
+>(
+  event: Name,
+  properties: ContractProperties<AnalyticsEvents[Name], Properties>,
+) => Result;
 
 export function isAnalyticsEventName(
   event: string,
@@ -49,23 +51,11 @@ export function parseEvent<Name extends AnalyticsEventName>(
  */
 export function createTracker<Result>(
   capture: CaptureFunction<Result>,
-): <
-  Name extends AnalyticsEventName,
-  Properties extends AnalyticsEvents[Name],
->(
-  event: Name,
-  properties: TrackProperties<AnalyticsEvents[Name], Properties>,
-) => Result;
+): Tracker<Result>;
 export function createTracker<Result, InvalidResult>(
   capture: CaptureFunction<Result>,
   options: TrackerOptions<InvalidResult>,
-): <
-  Name extends AnalyticsEventName,
-  Properties extends AnalyticsEvents[Name],
->(
-  event: Name,
-  properties: TrackProperties<AnalyticsEvents[Name], Properties>,
-) => Result | InvalidResult;
+): Tracker<Result | InvalidResult>;
 export function createTracker<Result, InvalidResult>(
   capture: CaptureFunction<Result>,
   options?: TrackerOptions<InvalidResult>,
@@ -75,7 +65,7 @@ export function createTracker<Result, InvalidResult>(
     Properties extends AnalyticsEvents[Name],
   >(
     event: Name,
-    properties: TrackProperties<AnalyticsEvents[Name], Properties>,
+    properties: ContractProperties<AnalyticsEvents[Name], Properties>,
   ): Result | InvalidResult {
     let parsedProperties: AnalyticsEvents[Name];
 

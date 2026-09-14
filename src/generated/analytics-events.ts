@@ -1,5 +1,5 @@
 // AUTO-GENERATED FILE.
-// DO NOT EDIT MANUALLY. Edit events/**/*.json and run pnpm generate.
+// DO NOT EDIT MANUALLY. Edit src/definitions/**/*.json and run pnpm generate.
 
 import { z } from "zod";
 
@@ -47,6 +47,28 @@ export const eventDefinitions = {
   },
 } as const;
 
+export const viewNames = {
+  /**
+   * User views the React integration example
+   */
+  integrationExample: "Integration Example",
+} as const;
+
+export const viewSchemas = {
+  /**
+   * User views the React integration example
+   */
+  "Integration Example": z.strictObject({
+    "source": z.enum(["direct", "documentation"]).optional().describe("How the user reached the view"),
+  }),
+} as const;
+
+export const userTraitsSchema = z.strictObject({
+  "email": z.string().optional().describe("User email address"),
+  "plan": z.enum(["free", "pro", "enterprise"]).optional().describe("Current product plan"),
+  "is_employee": z.boolean().optional().describe("Whether the user is a company employee"),
+});
+
 export type AnalyticsEventName = keyof typeof eventSchemas;
 
 export type AnalyticsEvents = {
@@ -59,3 +81,11 @@ export type AnalyticsEvent = {
     properties: AnalyticsEvents[Name];
   };
 }[AnalyticsEventName];
+
+export type AnalyticsViewName = keyof typeof viewSchemas;
+
+export type AnalyticsViews = {
+  [Name in AnalyticsViewName]: z.infer<(typeof viewSchemas)[Name]>;
+};
+
+export type UserTraits = z.infer<typeof userTraitsSchema>;

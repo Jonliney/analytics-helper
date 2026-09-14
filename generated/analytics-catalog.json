@@ -1,6 +1,55 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "propertySets": [],
+  "userTraits": {
+    "description": "Durable traits associated with an identified user",
+    "allowAdditionalTraits": false,
+    "traits": {
+      "email": {
+        "type": "string",
+        "description": "User email address",
+        "optional": true,
+        "allowOtherValues": false
+      },
+      "plan": {
+        "type": "string",
+        "description": "Current product plan",
+        "optional": true,
+        "enum": [
+          "free",
+          "pro",
+          "enterprise"
+        ],
+        "allowOtherValues": false
+      },
+      "is_employee": {
+        "type": "boolean",
+        "description": "Whether the user is a company employee",
+        "optional": true,
+        "allowOtherValues": false
+      }
+    }
+  },
+  "views": [
+    {
+      "name": "Integration Example",
+      "key": "integrationExample",
+      "description": "User views the React integration example",
+      "allowAdditionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "How the user reached the view",
+          "optional": true,
+          "enum": [
+            "direct",
+            "documentation"
+          ],
+          "allowOtherValues": false
+        }
+      }
+    }
+  ],
   "events": [
     {
       "name": "Signup Completed",

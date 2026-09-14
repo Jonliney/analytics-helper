@@ -1,4 +1,4 @@
-import { createTracker } from "data-system";
+import { createAnalytics } from "data-system";
 import posthog from "posthog-js/dist/module.slim";
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
@@ -14,11 +14,40 @@ if (posthogKey) {
   });
 }
 
-export const track = createTracker((event, properties) => {
-  if (!posthogKey) {
-    console.info("[analytics example]", event, properties);
-    return;
-  }
+function logFallback(operation: string, ...values: unknown[]) {
+  console.info(`[analytics example] ${operation}`, ...values);
+}
 
-  posthog.capture(event, properties);
+export const analytics = createAnalytics({
+  track(event, properties) {
+    if (!posthogKey) {
+      return logFallback("track", event, properties);
+    }
+    posthog.capture(event, properties);
+  },
+
+  identify(userId, traits) {
+    if (!posthogKey) {
+      return logFallback("identify", userId, traits);
+    }
+    posthog.identify(userId, traits);
+  },
+
+  view(name, properties) {
+    if (!posthogKey) {
+      return logFallback("view", name, properties);
+    }
+    posthog.capture("$pageview", {
+      ...properties,
+      page_name: name,
+      $current_url: window.location.href,
+    });
+  },
+
+  clearIdentity() {
+    if (!posthogKey) {
+      return logFallback("clearIdentity");
+    }
+    posthog.reset();
+  },
 });

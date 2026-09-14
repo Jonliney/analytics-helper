@@ -274,6 +274,69 @@ export const authoredPropertySetDefinitionFileSchema = z
       "A file may contain one reusable property set or an array of property sets.",
   });
 
+const viewDefinitionShape = {
+  name: eventNameSchema.describe(
+    "View name passed to the analytics adapter exactly as authored.",
+  ),
+  key: generatedIdentifierSchema.describe(
+    "Stable, language-safe identifier used in generated viewNames.",
+  ),
+  description: descriptionSchema,
+  allowAdditionalProperties: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Allow undeclared view properties while continuing to enforce declared required properties. Defaults to false.",
+    ),
+  properties: z
+    .record(
+      z.string().regex(PROPERTY_NAME_PATTERN),
+      authoredPropertyDefinitionSchema,
+    )
+    .readonly(),
+};
+
+export const authoredViewDefinitionSchema = z
+  .strictObject(viewDefinitionShape)
+  .readonly()
+  .meta({ id: "viewDefinition" });
+
+const authoredViewDefinitionArraySchema = z
+  .array(authoredViewDefinitionSchema)
+  .min(1);
+
+export const authoredViewDefinitionFileSchema = z
+  .union([authoredViewDefinitionSchema, authoredViewDefinitionArraySchema])
+  .meta({
+    title: "Analytics view definition file",
+    description:
+      "A file may contain one view definition or an array of view definitions.",
+  });
+
+export const authoredUserTraitsDefinitionSchema = z
+  .strictObject({
+    description: descriptionSchema,
+    allowAdditionalTraits: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Allow undeclared user traits while continuing to enforce declared required traits. Defaults to false.",
+      ),
+    traits: z
+      .record(
+        z.string().regex(PROPERTY_NAME_PATTERN),
+        authoredPropertyDefinitionSchema,
+      )
+      .readonly(),
+  })
+  .readonly()
+  .meta({
+    id: "userTraitsDefinition",
+    title: "Analytics user traits definition",
+    description:
+      "The company-wide contract for durable traits associated with an identified user.",
+  });
+
 export type AuthoredPropertyDefinition = z.input<
   typeof authoredPropertyDefinitionSchema
 >;
@@ -282,6 +345,12 @@ export type AuthoredEventDefinition = z.input<
 >;
 export type AuthoredPropertySetDefinition = z.input<
   typeof authoredPropertySetDefinitionSchema
+>;
+export type AuthoredViewDefinition = z.input<
+  typeof authoredViewDefinitionSchema
+>;
+export type AuthoredUserTraitsDefinition = z.input<
+  typeof authoredUserTraitsDefinitionSchema
 >;
 export type PropertyDefinition = z.output<
   typeof authoredPropertyDefinitionSchema
@@ -295,6 +364,13 @@ export type PropertySetDefinition = z.output<
 >;
 export type PropertySetDefinitionFile = z.output<
   typeof authoredPropertySetDefinitionFileSchema
+>;
+export type ViewDefinition = z.output<typeof authoredViewDefinitionSchema>;
+export type ViewDefinitionFile = z.output<
+  typeof authoredViewDefinitionFileSchema
+>;
+export type UserTraitsDefinition = z.output<
+  typeof authoredUserTraitsDefinitionSchema
 >;
 
 export function parseAuthoredEventDefinitionFile(
@@ -313,6 +389,20 @@ export function parseAuthoredPropertySetDefinitionFile(
   return Array.isArray(value)
     ? authoredPropertySetDefinitionArraySchema.parse(value)
     : authoredPropertySetDefinitionSchema.parse(value);
+}
+
+export function parseAuthoredViewDefinitionFile(
+  value: unknown,
+): ViewDefinitionFile {
+  return Array.isArray(value)
+    ? authoredViewDefinitionArraySchema.parse(value)
+    : authoredViewDefinitionSchema.parse(value);
+}
+
+export function parseAuthoredUserTraitsDefinition(
+  value: unknown,
+): UserTraitsDefinition {
+  return authoredUserTraitsDefinitionSchema.parse(value);
 }
 
 function renderAuthoringJsonSchema(
@@ -369,5 +459,19 @@ export function renderPropertySetDefinitionJsonSchema(): string {
   return renderAuthoringJsonSchema(
     authoredPropertySetDefinitionFileSchema,
     "analytics-property-set-definition.schema.json",
+  );
+}
+
+export function renderViewDefinitionJsonSchema(): string {
+  return renderAuthoringJsonSchema(
+    authoredViewDefinitionFileSchema,
+    "analytics-view-definition.schema.json",
+  );
+}
+
+export function renderUserTraitsDefinitionJsonSchema(): string {
+  return renderAuthoringJsonSchema(
+    authoredUserTraitsDefinitionSchema,
+    "analytics-user-traits-definition.schema.json",
   );
 }

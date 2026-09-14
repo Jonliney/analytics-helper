@@ -1,17 +1,41 @@
 import { useState } from "react";
-import { eventNames } from "data-system";
-import { isPostHogConfigured, track } from "./analytics";
+import { eventNames, viewNames } from "data-system";
+import { analytics, isPostHogConfigured } from "./analytics";
 
 export function App() {
-  const [lastTrackedAt, setLastTrackedAt] = useState<string>();
+  const [status, setStatus] = useState<string>();
+
+  function record(action: string) {
+    setStatus(`${action} at ${new Date().toLocaleTimeString()}.`);
+  }
 
   function trackSignupCompleted() {
-    track(eventNames.auth.signupCompleted, {
+    analytics.track(eventNames.auth.signupCompleted, {
       method: "email",
       campaign_id: "integration-example",
     });
+    record("Tracked Signup Completed");
+  }
 
-    setLastTrackedAt(new Date().toLocaleTimeString());
+  function identifyExampleUser() {
+    analytics.identify("example-user-123", {
+      email: "person@example.com",
+      plan: "pro",
+      is_employee: false,
+    });
+    record("Identified example user");
+  }
+
+  function trackExampleView() {
+    analytics.view(viewNames.integrationExample, {
+      source: "documentation",
+    });
+    record("Tracked Integration Example view");
+  }
+
+  function clearExampleIdentity() {
+    analytics.clearIdentity();
+    record("Cleared identity");
   }
 
   return (
@@ -20,17 +44,28 @@ export function App() {
         <p className="eyebrow">Integration example</p>
         <h1>Type-safe analytics with PostHog</h1>
         <p>
-          This button captures the generated <code>Signup Completed</code> event
-          with properties checked by TypeScript and Zod.
+          Each operation is checked by generated TypeScript types and Zod
+          schemas before the PostHog adapter receives it.
         </p>
 
-        <button type="button" onClick={trackSignupCompleted}>
-          Track Signup Completed
-        </button>
+        <div className="actions">
+          <button type="button" onClick={trackSignupCompleted}>
+            Track event
+          </button>
+          <button type="button" onClick={identifyExampleUser}>
+            Identify user
+          </button>
+          <button type="button" onClick={trackExampleView}>
+            Track view
+          </button>
+          <button type="button" onClick={clearExampleIdentity}>
+            Clear identity
+          </button>
+        </div>
 
         <p className="status" role="status">
-          {lastTrackedAt
-            ? `Event tracked at ${lastTrackedAt}.`
+          {status
+            ? status
             : isPostHogConfigured
               ? "PostHog is configured and ready."
               : "No PostHog key found; events will be logged to the console."}

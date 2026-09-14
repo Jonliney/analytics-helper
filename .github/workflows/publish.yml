@@ -60,6 +60,7 @@ jobs:
         run: >-
           tar -czf "analytics-contracts-${VERSION#v}.tar.gz"
           event-definition.schema.json property-set-definition.schema.json
+          user-traits-definition.schema.json view-definition.schema.json
           generated/analytics-catalog.json
 
       - name: Create GitHub release

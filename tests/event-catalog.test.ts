@@ -26,8 +26,8 @@ test("loads and sorts valid definitions from nested folders", (t) => {
     ["Payment Completed", "Signup Completed"],
   );
   assert.deepEqual(result.sources, [
-    "events/auth/signup.json",
-    "events/billing/payment.json",
+    "src/definitions/events/auth/signup.json",
+    "src/definitions/events/billing/payment.json",
   ]);
 
   const signup = result.events.find(({ name }) => name === "Signup Completed")!;
@@ -56,7 +56,87 @@ test("loads multiple events from one product-area file", (t) => {
     result.events.map(({ name }) => name),
     ["Signup Completed", "Signup Started"],
   );
-  assert.deepEqual(result.sources, ["events/auth/auth.json"]);
+  assert.deepEqual(result.sources, [
+    "src/definitions/events/auth/auth.json",
+  ]);
+});
+
+test("loads views and the company user-trait contract", (t) => {
+  const root = createCatalogFixture(
+    t,
+    { "auth/auth.json": validEvent },
+    {},
+    {
+      "settings.json": {
+        name: "Settings",
+        key: "settings",
+        description: "User views settings",
+        properties: { section: { type: "string" } },
+      },
+    },
+    {
+      "user.json": {
+        description: "Durable user traits",
+        traits: { plan: { type: "string", optional: true } },
+      },
+    },
+  );
+
+  const result = loadEventCatalog(root);
+
+  assert.equal(result.views[0]?.name, "Settings");
+  assert.equal(result.views[0]?.allowAdditionalProperties, false);
+  assert.equal(result.userTraits?.traits.plan?.optional, true);
+  assert.deepEqual(result.sources, [
+    "src/definitions/events/auth/auth.json",
+    "src/definitions/traits/user.json",
+    "src/definitions/views/settings.json",
+  ]);
+});
+
+test("rejects duplicate view names, keys, and multiple user-trait contracts", (t) => {
+  const root = createCatalogFixture(
+    t,
+    { "auth/auth.json": validEvent },
+    {},
+    {
+      "first.json": {
+        name: "Settings",
+        key: "settings",
+        description: "First view",
+        properties: {},
+      },
+      "second.json": [
+        {
+          name: "Settings",
+          key: "otherSettings",
+          description: "Duplicate name",
+          properties: {},
+        },
+        {
+          name: "Account",
+          key: "settings",
+          description: "Duplicate key",
+          properties: {},
+        },
+      ],
+    },
+    {
+      "first.json": { description: "First", traits: {} },
+      "second.json": { description: "Second", traits: {} },
+    },
+  );
+
+  assert.throws(
+    () => loadEventCatalog(root),
+    (error: unknown) => {
+      assert.ok(error instanceof CatalogValidationError);
+      assert.match(error.message, /duplicate view name "Settings"/);
+      assert.match(error.message, /duplicate view key "settings"/);
+      assert.match(error.message, /expected one user trait definition file, found 2/);
+      return true;
+    },
+  );
 });
 
 test("expands reusable property sets into every referencing event", (t) => {
@@ -90,8 +170,8 @@ test("expands reusable property sets into every referencing event", (t) => {
 
   assert.equal(catalog.propertySets.length, 1);
   assert.deepEqual(catalog.sources, [
-    "events/auth/auth.json",
-    "property-sets/context.json",
+    "src/definitions/events/auth/auth.json",
+    "src/definitions/property-sets/context.json",
   ]);
   for (const event of catalog.events) {
     assert.deepEqual(event.propertySets, ["session_context"]);
@@ -169,7 +249,7 @@ test("rejects duplicate global property set names", (t) => {
 
   assert.throws(
     () => loadEventCatalog(root),
-    /duplicate property set name "session_context".*property-sets\/first\.json.*property-sets\/nested\/second\.json/,
+    /duplicate property set name "session_context".*src\/definitions\/property-sets\/first\.json.*src\/definitions\/property-sets\/nested\/second\.json/,
   );
 });
 
@@ -351,14 +431,24 @@ test("rejects duplicate enum values and misplaced flexibility flags", (t) => {
 
 test("reports malformed JSON with its source file", (t) => {
   const root = createCatalogFixture(t, { "auth/signup.json": validEvent });
-  const malformedFile = path.join(root, "events", "auth", "malformed.json");
+  const malformedFile = path.join(
+    root,
+    "src",
+    "definitions",
+    "events",
+    "auth",
+    "malformed.json",
+  );
   fs.writeFileSync(malformedFile, "{ not-json }");
 
   assert.throws(
     () => loadEventCatalog(root),
     (error: unknown) => {
       assert.ok(error instanceof CatalogValidationError);
-      assert.match(error.message, /events\/auth\/malformed\.json: invalid JSON/);
+      assert.match(
+        error.message,
+        /src\/definitions\/events\/auth\/malformed\.json: invalid JSON/,
+      );
       return true;
     },
   );

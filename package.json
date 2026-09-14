@@ -1,7 +1,7 @@
 {
   "name": "data-system",
   "version": "1.0.0",
-  "description": "Generated, runtime-validated analytics event contracts",
+  "description": "Generated, runtime-validated analytics contracts",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -13,13 +13,17 @@
     },
     "./catalog.json": "./generated/analytics-catalog.json",
     "./event-definition.schema.json": "./event-definition.schema.json",
-    "./property-set-definition.schema.json": "./property-set-definition.schema.json"
+    "./property-set-definition.schema.json": "./property-set-definition.schema.json",
+    "./user-traits-definition.schema.json": "./user-traits-definition.schema.json",
+    "./view-definition.schema.json": "./view-definition.schema.json"
   },
   "files": [
     "dist",
     "generated/analytics-catalog.json",
     "event-definition.schema.json",
-    "property-set-definition.schema.json"
+    "property-set-definition.schema.json",
+    "user-traits-definition.schema.json",
+    "view-definition.schema.json"
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",

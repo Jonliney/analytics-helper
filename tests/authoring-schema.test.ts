@@ -6,8 +6,12 @@ import test from "node:test";
 import {
   parseAuthoredEventDefinitionFile,
   parseAuthoredPropertySetDefinitionFile,
+  parseAuthoredUserTraitsDefinition,
+  parseAuthoredViewDefinitionFile,
   renderEventDefinitionJsonSchema,
   renderPropertySetDefinitionJsonSchema,
+  renderUserTraitsDefinitionJsonSchema,
+  renderViewDefinitionJsonSchema,
 } from "../tooling/authoring-schema.js";
 import { validEvent } from "./catalog-fixture.js";
 
@@ -45,6 +49,31 @@ test("normalizes reusable property set definitions", () => {
     assert.equal(parsed.properties.session_id?.optional, false);
     assert.equal(parsed.properties.session_id?.allowOtherValues, false);
   }
+});
+
+test("normalizes view definitions and user traits", () => {
+  const view = parseAuthoredViewDefinitionFile({
+    name: "Settings",
+    key: "settings",
+    description: "User views settings",
+    properties: {
+      section: { type: "string", optional: true },
+    },
+  });
+  const userTraits = parseAuthoredUserTraitsDefinition({
+    description: "Durable user traits",
+    traits: {
+      plan: { type: "string", enum: ["free", "pro"], optional: true },
+    },
+  });
+
+  assert.equal(Array.isArray(view), false);
+  if (!Array.isArray(view)) {
+    assert.equal(view.allowAdditionalProperties, false);
+    assert.equal(view.properties.section?.optional, true);
+  }
+  assert.equal(userTraits.allowAdditionalTraits, false);
+  assert.equal(userTraits.traits.plan?.allowOtherValues, false);
 });
 
 test("preserves generated API identifiers", () => {
@@ -116,4 +145,28 @@ test("keeps the property set JSON Schema generated from the authoring schema", (
   assert.doesNotMatch(generatedSchema, /"readOnly"/);
   assert.match(generatedSchema, /"propertySetDefinition"/);
   assert.match(generatedSchema, /"uniqueItems": true/);
+});
+
+test("keeps the view JSON Schema generated from the authoring schema", () => {
+  const generatedSchema = renderViewDefinitionJsonSchema();
+  const checkedInSchema = fs.readFileSync(
+    path.join(repositoryRoot, "view-definition.schema.json"),
+    "utf8",
+  );
+
+  assert.equal(checkedInSchema, generatedSchema);
+  assert.match(generatedSchema, /"viewDefinition"/);
+  assert.match(generatedSchema, /"allowAdditionalProperties"/);
+});
+
+test("keeps the user-trait JSON Schema generated from the authoring schema", () => {
+  const generatedSchema = renderUserTraitsDefinitionJsonSchema();
+  const checkedInSchema = fs.readFileSync(
+    path.join(repositoryRoot, "user-traits-definition.schema.json"),
+    "utf8",
+  );
+
+  assert.equal(checkedInSchema, generatedSchema);
+  assert.match(generatedSchema, /"userTraitsDefinition"/);
+  assert.match(generatedSchema, /"allowAdditionalTraits"/);
 });

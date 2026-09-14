@@ -24,4 +24,5 @@ jobs:
         run: >-
           git diff --exit-code --
           event-definition.schema.json property-set-definition.schema.json
+          user-traits-definition.schema.json view-definition.schema.json
           src/generated generated

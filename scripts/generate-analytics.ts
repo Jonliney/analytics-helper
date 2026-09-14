@@ -6,7 +6,7 @@ try {
   const result = buildAnalyticsProject(rootDirectory);
 
   console.log(
-    `Generated ${result.eventCount} analytics event${result.eventCount === 1 ? "" : "s"} and ${result.propertySetCount} property set${result.propertySetCount === 1 ? "" : "s"}:`,
+    `Generated ${result.eventCount} analytics event${result.eventCount === 1 ? "" : "s"}, ${result.viewCount} view${result.viewCount === 1 ? "" : "s"}, ${result.propertySetCount} property set${result.propertySetCount === 1 ? "" : "s"}, and ${result.hasUserTraits ? "a user-traits contract" : "no user-traits contract"}:`,
   );
 
   for (const artifact of result.artifacts) {

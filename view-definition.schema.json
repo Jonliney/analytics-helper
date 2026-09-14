@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://company.example/schemas/analytics-view-definition.schema.json",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/viewDefinition"
+    },
+    {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/viewDefinition"
+      }
+    }
+  ],
+  "title": "Analytics view definition file",
+  "description": "A file may contain one view definition or an array of view definitions.",
+  "definitions": {
+    "viewDefinition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "description": "View name passed to the analytics adapter exactly as authored."
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][A-Za-z0-9]*$",
+          "description": "Stable, language-safe identifier used in generated viewNames."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowAdditionalProperties": {
+          "default": false,
+          "description": "Allow undeclared view properties while continuing to enforce declared required properties. Defaults to false.",
+          "type": "boolean"
+        },
+        "properties": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/propertyDefinition"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "key",
+        "description",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "propertyDefinition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "string"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            },
+            "enum": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "allowOtherValues": {
+              "default": false,
+              "description": "Treat enum entries as recommended values rather than an exhaustive set. Defaults to false.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "A string property may optionally declare exhaustive or recommended values.",
+          "dependencies": {
+            "allowOtherValues": [
+              "enum"
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "number"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "optional": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

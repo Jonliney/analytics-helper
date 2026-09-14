@@ -17,18 +17,33 @@ export function createCatalogFixture(
   context: TestContext,
   eventFiles: Readonly<Record<string, unknown>>,
   propertySetFiles: Readonly<Record<string, unknown>> = {},
+  viewFiles: Readonly<Record<string, unknown>> = {},
+  userTraitFiles: Readonly<Record<string, unknown>> = {},
 ): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "analytics-catalog-"));
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const definitions = path.join(root, "src", "definitions");
 
   for (const [relativePath, value] of Object.entries(eventFiles)) {
-    const file = path.join(root, "events", relativePath);
+    const file = path.join(definitions, "events", relativePath);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(value));
   }
 
   for (const [relativePath, value] of Object.entries(propertySetFiles)) {
-    const file = path.join(root, "property-sets", relativePath);
+    const file = path.join(definitions, "property-sets", relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(value));
+  }
+
+  for (const [relativePath, value] of Object.entries(viewFiles)) {
+    const file = path.join(definitions, "views", relativePath);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(value));
+  }
+
+  for (const [relativePath, value] of Object.entries(userTraitFiles)) {
+    const file = path.join(definitions, "traits", relativePath);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(value));
   }

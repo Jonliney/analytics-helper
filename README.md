@@ -5,8 +5,8 @@ TypeScript and language-neutral contracts.
 
 ## Add or edit an event
 
-Add a JSON file anywhere under `events/`. A file can contain one event or an
-array of related events.
+Add a JSON file anywhere under `src/definitions/events/`. A file can contain one
+event or an array of related events.
 
 ```json
 {
@@ -58,8 +58,9 @@ array of related events.
 
 ## Reuse common properties
 
-Define a shared contract in `property-sets/`. Property set names are globally
-unique, use `snake_case`, and are referenced by name rather than file path.
+Define a shared contract in `src/definitions/property-sets/`. Property set names
+are globally unique, use `snake_case`, and are referenced by name rather than
+file path.
 
 ```json
 {
@@ -90,6 +91,44 @@ Shared properties are expanded into every generated contract. An unknown set or
 a property duplicated by another set or the event itself fails validation.
 Property sets are flat and cannot reference other sets. They declare properties;
 they do not automatically populate values at tracking time.
+
+## Define user traits and views
+
+Define durable information about identified users in
+`src/definitions/traits/user.json`. This is one global contract. Trait
+definitions use the same types, enums, and optional flags as event properties.
+
+```json
+{
+  "description": "Durable traits associated with an identified user",
+  "traits": {
+    "email": { "type": "string", "optional": true },
+    "plan": {
+      "type": "string",
+      "enum": ["free", "pro", "enterprise"],
+      "optional": true
+    }
+  }
+}
+```
+
+Define page or screen views in JSON files under `src/definitions/views/`:
+
+```json
+{
+  "name": "Product Details",
+  "key": "productDetails",
+  "description": "User views a product",
+  "properties": {
+    "product_id": { "type": "string" }
+  }
+}
+```
+
+Views generate constants such as `viewNames.productDetails`. Traits and views
+are strict by default and support `allowAdditionalTraits` and
+`allowAdditionalProperties` respectively when an explicit escape hatch is
+needed.
 
 ## Deprecate an event
 
@@ -126,8 +165,8 @@ default Markdown output can be copied into a ticket or saved with
 machine-readable report. Impact reporting is informational: it recommends a
 semantic version change but does not reject contract changes.
 
-Commit definitions together with `event-definition.schema.json`,
-`property-set-definition.schema.json`, `src/generated/`, and `generated/`.
+Commit definitions together with the generated `*-definition.schema.json`
+files, `src/generated/`, and `generated/`.
 `dist/` and `node_modules/` are local-only and must not be committed.
 
 ## TypeScript usage
@@ -136,24 +175,23 @@ Replace `data-system` with the published package name when the package is given
 its company scope.
 
 ```ts
-import posthog from "posthog-js";
-import { createTracker, eventNames } from "data-system";
+import { analytics } from "./analytics";
+import { eventNames, viewNames } from "data-system";
 
-const track = createTracker((event, properties) =>
-  posthog.capture(event, properties),
-);
-
-track(eventNames.auth.signupCompleted, {
+analytics.track(eventNames.auth.signupCompleted, {
   method: "email",
   campaign_id: "spring-launch",
 });
+
+analytics.identify("user-123", { plan: "pro" });
+analytics.view(viewNames.integrationExample, { source: "direct" });
+analytics.clearIdentity();
 ```
 
-Unknown events, missing required properties, invalid enum values, and unexpected
-properties fail TypeScript checking and runtime validation. Use
-`parseEvent(name, properties)` when validation is needed without capture. Raw
-event strings remain supported, but `eventNames` provides autocomplete and
-deprecation guidance.
+Create `analytics` with `createAnalytics(adapter)`. The adapter is the only code
+that knows about PostHog or another provider. Events, user traits, and views are
+type checked and runtime validated before reaching it. `createTracker` remains
+available when only event capture is required.
 
 A runnable React, Vite, and PostHog integration is available in
 [`examples/react-posthog`](examples/react-posthog). Copy its `.env.example` to
@@ -205,5 +243,6 @@ Never commit the token itself.
 ## Language-neutral catalog
 
 The build also generates `generated/analytics-catalog.json`. Other tooling can
-consume this catalog without parsing the TypeScript output. Each event contains
-its exact provider `name`, stable programmatic `key`, and optional `domain`.
+consume this catalog without parsing the TypeScript output. It contains events,
+views, user traits, and reusable property sets. Each event contains its exact
+provider `name`, stable programmatic `key`, and optional `domain`.

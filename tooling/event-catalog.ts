@@ -6,9 +6,13 @@ import { z } from "zod";
 import {
   parseAuthoredEventDefinitionFile,
   parseAuthoredPropertySetDefinitionFile,
+  parseAuthoredUserTraitsDefinition,
+  parseAuthoredViewDefinitionFile,
   type EventDefinition,
   type PropertyDefinition,
   type PropertySetDefinition,
+  type UserTraitsDefinition,
+  type ViewDefinition,
 } from "./authoring-schema.js";
 import { resolveEventNameHierarchy } from "./event-identifiers.js";
 
@@ -16,6 +20,8 @@ export type {
   EventDefinition,
   PropertyDefinition,
   PropertySetDefinition,
+  UserTraitsDefinition,
+  ViewDefinition,
 } from "./authoring-schema.js";
 
 type LocatedDefinition<Definition> = Readonly<{
@@ -26,6 +32,8 @@ type LocatedDefinition<Definition> = Readonly<{
 export type EventCatalog = Readonly<{
   events: readonly EventDefinition[];
   propertySets: readonly PropertySetDefinition[];
+  userTraits?: UserTraitsDefinition;
+  views: readonly ViewDefinition[];
   sources: readonly string[];
 }>;
 
@@ -73,16 +81,18 @@ function formatSchemaIssue(issue: z.core.$ZodIssue): string {
 
 function readDefinitionFiles<Definition>(
   rootDirectory: string,
+  definitionsDirectory: string,
   directoryName: string,
   required: boolean,
   parse: (value: unknown) => readonly Definition[],
   issues: string[],
 ): LocatedDefinition<Definition>[] {
-  const directory = path.join(rootDirectory, directoryName);
+  const directory = path.join(definitionsDirectory, directoryName);
+  const relativeDirectory = path.relative(rootDirectory, directory);
 
   if (!fs.existsSync(directory)) {
     if (required) {
-      issues.push(`${directoryName}/: directory does not exist`);
+      issues.push(`${relativeDirectory}/: directory does not exist`);
     }
     return [];
   }
@@ -90,7 +100,7 @@ function readDefinitionFiles<Definition>(
   const files = findJsonFiles(directory);
 
   if (required && files.length === 0) {
-    issues.push(`${directoryName}/: no definition JSON files were found`);
+    issues.push(`${relativeDirectory}/: no definition JSON files were found`);
   }
 
   const locatedDefinitions: LocatedDefinition<Definition>[] = [];
@@ -173,6 +183,25 @@ function reportDuplicateNames<Definition extends { name: string }>(
   }
 }
 
+function reportDuplicateViewKeys(
+  definitions: readonly LocatedDefinition<ViewDefinition>[],
+  issues: string[],
+): void {
+  const firstByKey = new Map<string, LocatedDefinition<ViewDefinition>>();
+
+  for (const located of definitions) {
+    const first = firstByKey.get(located.definition.key);
+    if (!first) {
+      firstByKey.set(located.definition.key, located);
+      continue;
+    }
+
+    issues.push(
+      `duplicate view key ${JSON.stringify(located.definition.key)} for ${JSON.stringify(first.definition.name)} in ${first.source} and ${JSON.stringify(located.definition.name)} in ${located.source}`,
+    );
+  }
+}
+
 function resolveSharedProperties(
   locatedEvents: readonly LocatedDefinition<EventDefinition>[],
   propertySetsByName: ReadonlyMap<string, PropertySetDefinition>,
@@ -231,8 +260,14 @@ function resolveSharedProperties(
 
 export function loadEventCatalog(rootDirectory: string): EventCatalog {
   const issues: string[] = [];
+  const definitionsDirectory = path.join(
+    rootDirectory,
+    "src",
+    "definitions",
+  );
   const locatedPropertySets = readDefinitionFiles(
     rootDirectory,
+    definitionsDirectory,
     "property-sets",
     false,
     (value) => {
@@ -241,8 +276,28 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
     },
     issues,
   );
+  const locatedUserTraits = readDefinitionFiles(
+    rootDirectory,
+    definitionsDirectory,
+    "traits",
+    false,
+    (value) => [parseAuthoredUserTraitsDefinition(value)],
+    issues,
+  );
+  const locatedViews = readDefinitionFiles(
+    rootDirectory,
+    definitionsDirectory,
+    "views",
+    false,
+    (value) => {
+      const parsed = parseAuthoredViewDefinitionFile(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    },
+    issues,
+  );
   const authoredEvents = readDefinitionFiles(
     rootDirectory,
+    definitionsDirectory,
     "events",
     true,
     (value) => {
@@ -254,6 +309,14 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
 
   reportDuplicateNames(locatedPropertySets, "property set", issues);
   reportDuplicateNames(authoredEvents, "event", issues);
+  reportDuplicateNames(locatedViews, "view", issues);
+  reportDuplicateViewKeys(locatedViews, issues);
+
+  if (locatedUserTraits.length > 1) {
+    issues.push(
+      `src/definitions/traits/: expected one user trait definition file, found ${locatedUserTraits.length}`,
+    );
+  }
 
   const propertySetsByName = new Map<string, PropertySetDefinition>();
   for (const { definition } of locatedPropertySets) {
@@ -313,11 +376,26 @@ export function loadEventCatalog(rootDirectory: string): EventCatalog {
   const propertySets = locatedPropertySets
     .map(({ definition }) => definition)
     .sort((left, right) => left.name.localeCompare(right.name));
+  const userTraits = locatedUserTraits[0]?.definition;
+  const views = locatedViews
+    .map(({ definition }) => definition)
+    .sort((left, right) => left.name.localeCompare(right.name));
   const sources = [
     ...new Set(
-      [...locatedEvents, ...locatedPropertySets].map(({ source }) => source),
+      [
+        ...locatedEvents,
+        ...locatedPropertySets,
+        ...locatedUserTraits,
+        ...locatedViews,
+      ].map(({ source }) => source),
     ),
   ].sort((left, right) => left.localeCompare(right));
 
-  return { events, propertySets, sources };
+  return {
+    events,
+    propertySets,
+    ...(userTraits === undefined ? {} : { userTraits }),
+    views,
+    sources,
+  };
 }

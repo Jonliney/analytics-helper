@@ -1,0 +1,21 @@
+{
+  "description": "Durable traits associated with an identified user",
+  "traits": {
+    "email": {
+      "type": "string",
+      "description": "User email address",
+      "optional": true
+    },
+    "plan": {
+      "type": "string",
+      "description": "Current product plan",
+      "enum": ["free", "pro", "enterprise"],
+      "optional": true
+    },
+    "is_employee": {
+      "type": "boolean",
+      "description": "Whether the user is a company employee",
+      "optional": true
+    }
+  }
+}

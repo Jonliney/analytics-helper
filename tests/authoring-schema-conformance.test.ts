@@ -6,8 +6,12 @@ import { Ajv, type AnySchema } from "ajv";
 import {
   authoredEventDefinitionFileSchema,
   authoredPropertySetDefinitionFileSchema,
+  authoredUserTraitsDefinitionSchema,
+  authoredViewDefinitionFileSchema,
   renderEventDefinitionJsonSchema,
   renderPropertySetDefinitionJsonSchema,
+  renderUserTraitsDefinitionJsonSchema,
+  renderViewDefinitionJsonSchema,
 } from "../tooling/authoring-schema.js";
 
 const baseEvent = {
@@ -317,6 +321,106 @@ test("Zod and the generated property set schema accept the same definitions", ()
     assert.equal(zodResult.success, fixture.valid, fixture.name);
     assert.equal(
       jsonSchemaResult,
+      fixture.valid,
+      `${fixture.name}: ${ajv.errorsText(validateJsonSchema.errors)}`,
+    );
+  }
+});
+
+test("Zod and the generated view schema accept the same definitions", () => {
+  const ajv = new Ajv({ allErrors: true, strict: true });
+  const validateJsonSchema = ajv.compile(
+    JSON.parse(renderViewDefinitionJsonSchema()) as AnySchema,
+  );
+  const viewCases = [
+    {
+      name: "a view",
+      value: {
+        name: "Product Details",
+        key: "productDetails",
+        description: "User views a product",
+        properties: { product_id: { type: "string" } },
+      },
+      valid: true,
+    },
+    {
+      name: "an invalid view key",
+      value: {
+        name: "Product Details",
+        key: "product_details",
+        description: "User views a product",
+        properties: {},
+      },
+      valid: false,
+    },
+    {
+      name: "an undeclared view field",
+      value: {
+        name: "Product Details",
+        key: "productDetails",
+        description: "User views a product",
+        properties: {},
+        unexpected: true,
+      },
+      valid: false,
+    },
+  ] as const;
+
+  for (const fixture of viewCases) {
+    assert.equal(
+      authoredViewDefinitionFileSchema.safeParse(fixture.value).success,
+      fixture.valid,
+      `${fixture.name}: Zod result`,
+    );
+    assert.equal(
+      validateJsonSchema(fixture.value),
+      fixture.valid,
+      `${fixture.name}: ${ajv.errorsText(validateJsonSchema.errors)}`,
+    );
+  }
+});
+
+test("Zod and the generated user-trait schema accept the same definitions", () => {
+  const ajv = new Ajv({ allErrors: true, strict: true });
+  const validateJsonSchema = ajv.compile(
+    JSON.parse(renderUserTraitsDefinitionJsonSchema()) as AnySchema,
+  );
+  const traitCases = [
+    {
+      name: "a user-trait contract",
+      value: {
+        description: "Durable user traits",
+        traits: { plan: { type: "string", optional: true } },
+      },
+      valid: true,
+    },
+    {
+      name: "an invalid trait name",
+      value: {
+        description: "Durable user traits",
+        traits: { planName: { type: "string" } },
+      },
+      valid: false,
+    },
+    {
+      name: "an undeclared trait field",
+      value: {
+        description: "Durable user traits",
+        traits: {},
+        unexpected: true,
+      },
+      valid: false,
+    },
+  ] as const;
+
+  for (const fixture of traitCases) {
+    assert.equal(
+      authoredUserTraitsDefinitionSchema.safeParse(fixture.value).success,
+      fixture.valid,
+      `${fixture.name}: Zod result`,
+    );
+    assert.equal(
+      validateJsonSchema(fixture.value),
       fixture.valid,
       `${fixture.name}: ${ajv.errorsText(validateJsonSchema.errors)}`,
     );

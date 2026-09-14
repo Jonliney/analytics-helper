@@ -4,6 +4,8 @@ import path from "node:path";
 import {
   renderEventDefinitionJsonSchema,
   renderPropertySetDefinitionJsonSchema,
+  renderUserTraitsDefinitionJsonSchema,
+  renderViewDefinitionJsonSchema,
 } from "./authoring-schema.js";
 import { loadEventCatalog, type EventCatalog } from "./event-catalog.js";
 import {
@@ -26,19 +28,30 @@ const OUTPUT_TARGETS: readonly OutputTarget[] = [
     render: () => renderPropertySetDefinitionJsonSchema(),
   },
   {
+    relativePath: "user-traits-definition.schema.json",
+    render: () => renderUserTraitsDefinitionJsonSchema(),
+  },
+  {
+    relativePath: "view-definition.schema.json",
+    render: () => renderViewDefinitionJsonSchema(),
+  },
+  {
     relativePath: "src/generated/analytics-events.ts",
-    render: ({ events }) => renderTypeScriptCatalog(events),
+    render: ({ events, views, userTraits }) =>
+      renderTypeScriptCatalog(events, views, userTraits),
   },
   {
     relativePath: "generated/analytics-catalog.json",
-    render: ({ events, propertySets }) =>
-      renderLanguageNeutralCatalog(events, propertySets),
+    render: ({ events, propertySets, views, userTraits }) =>
+      renderLanguageNeutralCatalog(events, propertySets, views, userTraits),
   },
 ];
 
 export type AnalyticsBuildResult = Readonly<{
   eventCount: number;
   propertySetCount: number;
+  viewCount: number;
+  hasUserTraits: boolean;
   artifacts: readonly string[];
 }>;
 
@@ -64,6 +77,8 @@ export function buildAnalyticsProject(
   return {
     eventCount: catalog.events.length,
     propertySetCount: catalog.propertySets.length,
+    viewCount: catalog.views.length,
+    hasUserTraits: catalog.userTraits !== undefined,
     artifacts: artifacts.map(({ relativePath }) => relativePath),
   };
 }
