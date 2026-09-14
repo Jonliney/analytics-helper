@@ -22,6 +22,10 @@ export type TrackerOptions<InvalidResult = void> = Readonly<{
 type WithoutExtraProperties<Expected, Candidate> = Candidate &
   Record<Exclude<keyof Candidate, keyof Expected>, never>;
 
+type TrackProperties<Expected, Candidate> = string extends keyof Expected
+  ? Expected
+  : WithoutExtraProperties<Expected, Candidate>;
+
 export function isAnalyticsEventName(
   event: string,
 ): event is AnalyticsEventName {
@@ -50,7 +54,7 @@ export function createTracker<Result>(
   Properties extends AnalyticsEvents[Name],
 >(
   event: Name,
-  properties: WithoutExtraProperties<AnalyticsEvents[Name], Properties>,
+  properties: TrackProperties<AnalyticsEvents[Name], Properties>,
 ) => Result;
 export function createTracker<Result, InvalidResult>(
   capture: CaptureFunction<Result>,
@@ -60,7 +64,7 @@ export function createTracker<Result, InvalidResult>(
   Properties extends AnalyticsEvents[Name],
 >(
   event: Name,
-  properties: WithoutExtraProperties<AnalyticsEvents[Name], Properties>,
+  properties: TrackProperties<AnalyticsEvents[Name], Properties>,
 ) => Result | InvalidResult;
 export function createTracker<Result, InvalidResult>(
   capture: CaptureFunction<Result>,
@@ -71,7 +75,7 @@ export function createTracker<Result, InvalidResult>(
     Properties extends AnalyticsEvents[Name],
   >(
     event: Name,
-    properties: WithoutExtraProperties<AnalyticsEvents[Name], Properties>,
+    properties: TrackProperties<AnalyticsEvents[Name], Properties>,
   ): Result | InvalidResult {
     let parsedProperties: AnalyticsEvents[Name];
 

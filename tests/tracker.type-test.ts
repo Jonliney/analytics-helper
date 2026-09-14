@@ -12,6 +12,12 @@ track(eventNames.auth.signupStarted, {
   experiment_variant: "short-form",
 });
 
+const openEventProperties = {
+  method: "email",
+  temporary_property: true,
+};
+track(eventNames.auth.signupStarted, openEventProperties);
+
 const temporaryMethod: string = "temporary-provider";
 track(eventNames.auth.signupStarted, { method: temporaryMethod });
 
