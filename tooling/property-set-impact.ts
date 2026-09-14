@@ -30,14 +30,32 @@ const impactEventSchema = z.object({
   replacement: z.string().optional(),
 });
 
+const impactViewSchema = z.object({
+  name: z.string(),
+  key: z.string().optional(),
+  description: z.string().optional(),
+  allowAdditionalProperties: z.boolean().default(false),
+  properties: z.record(z.string(), impactPropertySchema).default({}),
+});
+
+const impactUserTraitsSchema = z.object({
+  description: z.string().optional(),
+  allowAdditionalTraits: z.boolean().default(false),
+  traits: z.record(z.string(), impactPropertySchema).default({}),
+});
+
 const impactCatalogSchema = z.object({
   schemaVersion: z.number(),
   propertySets: z.array(impactPropertySetSchema).default([]),
+  userTraits: impactUserTraitsSchema.nullable().default(null),
+  views: z.array(impactViewSchema).default([]),
   events: z.array(impactEventSchema),
 });
 
 export type ImpactCatalog = z.output<typeof impactCatalogSchema>;
 export type ImpactEvent = ImpactCatalog["events"][number];
+export type ImpactView = ImpactCatalog["views"][number];
+export type ImpactUserTraits = NonNullable<ImpactCatalog["userTraits"]>;
 export type ImpactClassification = "breaking" | "additive" | "metadata";
 export type RecommendedVersionBump = "major" | "minor" | "patch" | "none";
 

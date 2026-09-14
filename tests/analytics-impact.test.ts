@@ -7,8 +7,19 @@ import {
 } from "../tooling/analytics-impact.js";
 import { parseImpactCatalog } from "../tooling/property-set-impact.js";
 
-function catalog(propertySets: unknown[], events: unknown[]) {
-  return parseImpactCatalog({ schemaVersion: 4, propertySets, events });
+function catalog(
+  propertySets: unknown[],
+  events: unknown[],
+  views: unknown[] = [],
+  userTraits: unknown = null,
+) {
+  return parseImpactCatalog({
+    schemaVersion: 4,
+    propertySets,
+    events,
+    views,
+    userTraits,
+  });
 }
 
 const signupEvent = {
@@ -21,6 +32,14 @@ const signupEvent = {
     method: { type: "string", optional: false },
   },
   status: "active",
+};
+
+const settingsView = {
+  name: "Settings",
+  key: "settings",
+  description: "A user views settings",
+  allowAdditionalProperties: false,
+  properties: {},
 };
 
 test("reports direct event contract and metadata changes", () => {
@@ -45,6 +64,10 @@ test("reports direct event contract and metadata changes", () => {
     eventsRemoved: 0,
     eventsChanged: 1,
     eventsDeprecated: 0,
+    viewsAdded: 0,
+    viewsRemoved: 0,
+    viewsChanged: 0,
+    userTraitsChanged: false,
     propertySetsChanged: 0,
     affectedEvents: 1,
   });
@@ -143,6 +166,80 @@ test("reports deprecation without treating it as a breaking removal", () => {
 
   assert.equal(report.recommendedVersionBump, "minor");
   assert.equal(report.summary.eventsDeprecated, 1);
+});
+
+test("includes views and user traits in the release recommendation", () => {
+  const previous = catalog([], [signupEvent]);
+  const proposed = catalog(
+    [],
+    [signupEvent],
+    [settingsView],
+    {
+      description: "Durable user traits",
+      allowAdditionalTraits: false,
+      traits: {
+        account_id: { type: "string", optional: false },
+      },
+    },
+  );
+
+  const report = compareAnalyticsImpact(previous, proposed, "HEAD");
+  const markdown = formatAnalyticsImpactReport(report);
+
+  assert.equal(report.recommendedVersionBump, "major");
+  assert.equal(report.summary.viewsAdded, 1);
+  assert.equal(report.summary.userTraitsChanged, true);
+  assert.equal(report.views[0]?.change, "added");
+  assert.equal(report.views[0]?.classification, "additive");
+  assert.equal(report.userTraits?.classification, "breaking");
+  assert.equal(report.userTraits?.properties[0]?.property, "account_id");
+  assert.match(markdown, /Added views/);
+  assert.match(markdown, /User-trait changes/);
+  assert.match(markdown, /Added required property `account_id`/);
+});
+
+test("classifies changed and removed views", () => {
+  const previous = catalog([], [signupEvent], [settingsView]);
+  const changed = catalog([], [signupEvent], [
+    {
+      ...settingsView,
+      properties: {
+        section: { type: "string", optional: false },
+      },
+    },
+  ]);
+  const removed = catalog([], [signupEvent]);
+
+  const changedReport = compareAnalyticsImpact(previous, changed, "HEAD");
+  const removedReport = compareAnalyticsImpact(previous, removed, "HEAD");
+
+  assert.equal(changedReport.recommendedVersionBump, "major");
+  assert.equal(changedReport.summary.viewsChanged, 1);
+  assert.equal(changedReport.views[0]?.properties[0]?.property, "section");
+  assert.equal(removedReport.recommendedVersionBump, "major");
+  assert.equal(removedReport.summary.viewsRemoved, 1);
+  assert.equal(removedReport.views[0]?.change, "removed");
+});
+
+test("classifies optional trait additions as additive and removals as breaking", () => {
+  const withoutTraits = catalog([], [signupEvent]);
+  const withTraits = catalog([], [signupEvent], [], {
+    description: "Durable user traits",
+    allowAdditionalTraits: false,
+    traits: {
+      plan: { type: "string", optional: true },
+    },
+  });
+
+  const added = compareAnalyticsImpact(withoutTraits, withTraits, "HEAD");
+  const removed = compareAnalyticsImpact(withTraits, withoutTraits, "HEAD");
+
+  assert.equal(added.recommendedVersionBump, "minor");
+  assert.equal(added.userTraits?.change, "added");
+  assert.equal(added.userTraits?.properties[0]?.classification, "additive");
+  assert.equal(removed.recommendedVersionBump, "major");
+  assert.equal(removed.userTraits?.change, "removed");
+  assert.equal(removed.userTraits?.properties[0]?.classification, "breaking");
 });
 
 test("renders a ticket-ready empty report", () => {

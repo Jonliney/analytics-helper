@@ -5,6 +5,8 @@ import {
   type ImpactCatalog,
   type ImpactClassification,
   type ImpactEvent,
+  type ImpactUserTraits,
+  type ImpactView,
   type PropertyImpact,
   type PropertySetImpact,
   type RecommendedVersionBump,
@@ -40,11 +42,45 @@ export type EventImpact = Readonly<{
   properties: readonly EventPropertyImpact[];
 }>;
 
+export type ViewFieldImpact = Readonly<{
+  field: "name" | "key" | "description" | "allowAdditionalProperties";
+  classification: ImpactClassification;
+  summary: string;
+}>;
+
+export type ViewImpact = Readonly<{
+  change: "added" | "removed" | "changed";
+  classification: ImpactClassification;
+  before?: ImpactView;
+  after?: ImpactView;
+  fields: readonly ViewFieldImpact[];
+  properties: readonly PropertyImpact[];
+}>;
+
+export type UserTraitsFieldImpact = Readonly<{
+  field: "description" | "allowAdditionalTraits";
+  classification: ImpactClassification;
+  summary: string;
+}>;
+
+export type UserTraitsImpact = Readonly<{
+  change: "added" | "removed" | "changed";
+  classification: ImpactClassification;
+  before?: ImpactUserTraits;
+  after?: ImpactUserTraits;
+  fields: readonly UserTraitsFieldImpact[];
+  properties: readonly PropertyImpact[];
+}>;
+
 export type AnalyticsImpactSummary = Readonly<{
   eventsAdded: number;
   eventsRemoved: number;
   eventsChanged: number;
   eventsDeprecated: number;
+  viewsAdded: number;
+  viewsRemoved: number;
+  viewsChanged: number;
+  userTraitsChanged: boolean;
   propertySetsChanged: number;
   affectedEvents: number;
 }>;
@@ -54,13 +90,18 @@ export type AnalyticsImpactReport = Readonly<{
   recommendedVersionBump: RecommendedVersionBump;
   summary: AnalyticsImpactSummary;
   events: readonly EventImpact[];
+  views: readonly ViewImpact[];
+  userTraits: UserTraitsImpact | null;
   propertySets: readonly PropertySetImpact[];
 }>;
 
-type EventPair = Readonly<{
-  before?: ImpactEvent;
-  after?: ImpactEvent;
+type ContractPair<Contract> = Readonly<{
+  before?: Contract;
+  after?: Contract;
 }>;
+
+type EventPair = ContractPair<ImpactEvent>;
+type ViewPair = ContractPair<ImpactView>;
 
 const CLASSIFICATION_RANK: Readonly<Record<ImpactClassification, number>> = {
   metadata: 0,
@@ -82,10 +123,14 @@ function highestClassification(
 
 function versionBump(
   events: readonly EventImpact[],
+  views: readonly ViewImpact[],
+  userTraits: UserTraitsImpact | undefined,
   propertySets: readonly PropertySetImpact[],
 ): RecommendedVersionBump {
   const classifications = [
     ...events.map((event) => event.classification),
+    ...views.map((view) => view.classification),
+    ...(userTraits ? [userTraits.classification] : []),
     ...propertySets.map((propertySet) => propertySet.classification),
   ];
 
@@ -98,64 +143,98 @@ function versionBump(
   return classifications.length > 0 ? "patch" : "none";
 }
 
-function pairMatchingEvents(
-  previous: readonly ImpactEvent[],
-  proposed: readonly ImpactEvent[],
-): EventPair[] {
+function pairMatchingContracts<Contract>(
+  previous: readonly Contract[],
+  proposed: readonly Contract[],
+  identities: readonly ((contract: Contract) => string | undefined)[],
+  sortName: (contract: Contract) => string,
+): ContractPair<Contract>[] {
   const unmatchedPrevious = new Set(previous);
   const unmatchedProposed = new Set(proposed);
-  const pairs: EventPair[] = [];
+  const pairs: ContractPair<Contract>[] = [];
 
-  function matchUniqueBy(identity: (event: ImpactEvent) => string | undefined) {
-    const previousByIdentity = new Map<string, ImpactEvent[]>();
-    const proposedByIdentity = new Map<string, ImpactEvent[]>();
+  function matchUniqueBy(identity: (contract: Contract) => string | undefined) {
+    const previousByIdentity = new Map<string, Contract[]>();
+    const proposedByIdentity = new Map<string, Contract[]>();
 
-    for (const event of unmatchedPrevious) {
-      const value = identity(event);
+    for (const contract of unmatchedPrevious) {
+      const value = identity(contract);
       if (value !== undefined) {
         previousByIdentity.set(value, [
           ...(previousByIdentity.get(value) ?? []),
-          event,
+          contract,
         ]);
       }
     }
-    for (const event of unmatchedProposed) {
-      const value = identity(event);
+    for (const contract of unmatchedProposed) {
+      const value = identity(contract);
       if (value !== undefined) {
         proposedByIdentity.set(value, [
           ...(proposedByIdentity.get(value) ?? []),
-          event,
+          contract,
         ]);
       }
     }
 
-    for (const [identityValue, previousEvents] of previousByIdentity) {
-      const proposedEvents = proposedByIdentity.get(identityValue);
-      if (previousEvents.length !== 1 || proposedEvents?.length !== 1) {
+    for (const [identityValue, previousContracts] of previousByIdentity) {
+      const proposedContracts = proposedByIdentity.get(identityValue);
+      if (
+        previousContracts.length !== 1 ||
+        proposedContracts?.length !== 1
+      ) {
         continue;
       }
 
-      const before = previousEvents[0]!;
-      const after = proposedEvents[0]!;
+      const before = previousContracts[0]!;
+      const after = proposedContracts[0]!;
       pairs.push({ before, after });
       unmatchedPrevious.delete(before);
       unmatchedProposed.delete(after);
     }
   }
 
-  matchUniqueBy((event) => event.name);
-  matchUniqueBy((event) =>
-    event.key === undefined ? undefined : `${event.domain ?? ""}\0${event.key}`,
-  );
-  matchUniqueBy((event) => event.key);
+  for (const identity of identities) {
+    matchUniqueBy(identity);
+  }
 
   pairs.push(...[...unmatchedPrevious].map((before) => ({ before })));
   pairs.push(...[...unmatchedProposed].map((after) => ({ after })));
 
   return pairs.sort((left, right) =>
-    (left.after?.name ?? left.before!.name).localeCompare(
-      right.after?.name ?? right.before!.name,
+    sortName(left.after ?? left.before!).localeCompare(
+      sortName(right.after ?? right.before!),
     ),
+  );
+}
+
+function pairMatchingEvents(
+  previous: readonly ImpactEvent[],
+  proposed: readonly ImpactEvent[],
+): EventPair[] {
+  return pairMatchingContracts(
+    previous,
+    proposed,
+    [
+      (event) => event.name,
+      (event) =>
+        event.key === undefined
+          ? undefined
+          : `${event.domain ?? ""}\0${event.key}`,
+      (event) => event.key,
+    ],
+    (event) => event.name,
+  );
+}
+
+function pairMatchingViews(
+  previous: readonly ImpactView[],
+  proposed: readonly ImpactView[],
+): ViewPair[] {
+  return pairMatchingContracts(
+    previous,
+    proposed,
+    [(view) => view.name, (view) => view.key],
+    (view) => view.name,
   );
 }
 
@@ -323,6 +402,151 @@ function compareEventPair(
   };
 }
 
+function compareViewFields(
+  before: ImpactView,
+  after: ImpactView,
+): ViewFieldImpact[] {
+  const impacts: ViewFieldImpact[] = [];
+
+  if (before.name !== after.name) {
+    impacts.push({
+      field: "name",
+      classification: "breaking",
+      summary: `Provider view name changed from ${JSON.stringify(before.name)} to ${JSON.stringify(after.name)}`,
+    });
+  }
+  if (before.key !== after.key) {
+    impacts.push({
+      field: "key",
+      classification: before.key === undefined ? "metadata" : "breaking",
+      summary: `Generated key changed from ${JSON.stringify(before.key ?? "<not recorded>")} to ${JSON.stringify(after.key ?? "<not recorded>")}`,
+    });
+  }
+  if (before.description !== after.description) {
+    impacts.push({
+      field: "description",
+      classification: "metadata",
+      summary: "Description changed",
+    });
+  }
+  if (before.allowAdditionalProperties !== after.allowAdditionalProperties) {
+    impacts.push({
+      field: "allowAdditionalProperties",
+      classification: after.allowAdditionalProperties ? "additive" : "breaking",
+      summary: after.allowAdditionalProperties
+        ? "Undeclared properties are now accepted"
+        : "Undeclared properties are no longer accepted",
+    });
+  }
+
+  return impacts;
+}
+
+function compareViewPair(pair: ViewPair): ViewImpact | undefined {
+  if (pair.before === undefined) {
+    return {
+      change: "added",
+      classification: "additive",
+      after: pair.after!,
+      fields: [],
+      properties: [],
+    };
+  }
+  if (pair.after === undefined) {
+    return {
+      change: "removed",
+      classification: "breaking",
+      before: pair.before,
+      fields: [],
+      properties: [],
+    };
+  }
+
+  const fields = compareViewFields(pair.before, pair.after);
+  const properties = comparePropertyDefinitions(
+    pair.before.properties as Readonly<Record<string, PropertyDefinition>>,
+    pair.after.properties as Readonly<Record<string, PropertyDefinition>>,
+  );
+
+  if (fields.length === 0 && properties.length === 0) {
+    return undefined;
+  }
+
+  return {
+    change: "changed",
+    classification: highestClassification([
+      ...fields.map((impact) => impact.classification),
+      ...properties.map((impact) => impact.classification),
+    ]),
+    before: pair.before,
+    after: pair.after,
+    fields,
+    properties,
+  };
+}
+
+function compareUserTraits(
+  before: ImpactUserTraits | null,
+  after: ImpactUserTraits | null,
+): UserTraitsImpact | undefined {
+  if (before === null && after === null) {
+    return undefined;
+  }
+
+  const effectiveBefore: ImpactUserTraits = before ?? {
+    allowAdditionalTraits: false,
+    traits: {},
+  };
+  const effectiveAfter: ImpactUserTraits = after ?? {
+    allowAdditionalTraits: false,
+    traits: {},
+  };
+  const fields: UserTraitsFieldImpact[] = [];
+
+  if (effectiveBefore.description !== effectiveAfter.description) {
+    fields.push({
+      field: "description",
+      classification: "metadata",
+      summary: "Description changed",
+    });
+  }
+  if (
+    effectiveBefore.allowAdditionalTraits !==
+    effectiveAfter.allowAdditionalTraits
+  ) {
+    fields.push({
+      field: "allowAdditionalTraits",
+      classification: effectiveAfter.allowAdditionalTraits
+        ? "additive"
+        : "breaking",
+      summary: effectiveAfter.allowAdditionalTraits
+        ? "Undeclared user traits are now accepted"
+        : "Undeclared user traits are no longer accepted",
+    });
+  }
+
+  const properties = comparePropertyDefinitions(
+    effectiveBefore.traits as Readonly<Record<string, PropertyDefinition>>,
+    effectiveAfter.traits as Readonly<Record<string, PropertyDefinition>>,
+  );
+
+  if (fields.length === 0 && properties.length === 0) {
+    return undefined;
+  }
+
+  return {
+    change: before === null ? "added" : after === null ? "removed" : "changed",
+    classification: highestClassification([
+      ...fields.map((impact) => impact.classification),
+      ...properties.map((impact) => impact.classification),
+    ]),
+    ...(before === null ? {} : { before }),
+    ...(after === null ? {} : { after }),
+    fields,
+    properties,
+  };
+}
+
 export function compareAnalyticsImpact(
   previous: ImpactCatalog,
   proposed: ImpactCatalog,
@@ -333,6 +557,16 @@ export function compareAnalyticsImpact(
       const impact = compareEventPair(pair, previous, proposed);
       return impact ? [impact] : [];
     },
+  );
+  const views = pairMatchingViews(previous.views, proposed.views).flatMap(
+    (pair): ViewImpact[] => {
+      const impact = compareViewPair(pair);
+      return impact ? [impact] : [];
+    },
+  );
+  const userTraits = compareUserTraits(
+    previous.userTraits,
+    proposed.userTraits,
   );
   const propertySets = comparePropertySetImpact(
     previous,
@@ -350,7 +584,12 @@ export function compareAnalyticsImpact(
 
   return {
     base,
-    recommendedVersionBump: versionBump(events, propertySets),
+    recommendedVersionBump: versionBump(
+      events,
+      views,
+      userTraits,
+      propertySets,
+    ),
     summary: {
       eventsAdded: events.filter((event) => event.change === "added").length,
       eventsRemoved: events.filter((event) => event.change === "removed").length,
@@ -360,10 +599,16 @@ export function compareAnalyticsImpact(
           event.before?.status === "active" &&
           event.after?.status === "deprecated",
       ).length,
+      viewsAdded: views.filter((view) => view.change === "added").length,
+      viewsRemoved: views.filter((view) => view.change === "removed").length,
+      viewsChanged: views.filter((view) => view.change === "changed").length,
+      userTraitsChanged: userTraits !== undefined,
       propertySetsChanged: propertySets.length,
       affectedEvents: affectedEventNames.size,
     },
     events,
+    views,
+    userTraits: userTraits ?? null,
     propertySets,
   };
 }
@@ -371,6 +616,10 @@ export function compareAnalyticsImpact(
 function eventIdentifier(event: ImpactEvent): string {
   const key = event.key ?? event.name;
   return event.domain ? `${event.domain}.${key}` : key;
+}
+
+function viewIdentifier(view: ImpactView): string {
+  return view.key ?? view.name;
 }
 
 function classificationLabel(classification: ImpactClassification): string {
@@ -439,6 +688,74 @@ function formatChangedEvents(events: readonly EventImpact[]): string {
   return `## Changed events\n\n${entries.join("\n\n")}`;
 }
 
+function formatViewList(
+  views: readonly ViewImpact[],
+  change: "added" | "removed",
+): string {
+  const matching = views.filter((view) => view.change === change);
+  if (matching.length === 0) {
+    return "";
+  }
+
+  const heading = change === "added" ? "Added views" : "Removed views";
+  const entries = matching
+    .map((impact) => {
+      const view = (impact.after ?? impact.before)!;
+      return `- \`${viewIdentifier(view)}\` — ${view.name}`;
+    })
+    .join("\n");
+
+  return `## ${heading}\n\n${entries}`;
+}
+
+function formatChangedViews(views: readonly ViewImpact[]): string {
+  const changed = views.filter((view) => view.change === "changed");
+  if (changed.length === 0) {
+    return "";
+  }
+
+  const entries = changed.map((impact) => {
+    const view = impact.after!;
+    const changes = [
+      ...impact.fields.map(
+        (field) =>
+          `- **${classificationLabel(field.classification)}:** ${field.summary}`,
+      ),
+      ...impact.properties.map(
+        (property) =>
+          `- **${classificationLabel(property.classification)}:** ${formatPropertyImpact(property)}`,
+      ),
+    ].join("\n");
+    const renamed =
+      impact.before?.name !== view.name
+        ? ` (previously ${impact.before?.name})`
+        : "";
+
+    return `### \`${viewIdentifier(view)}\` — ${view.name}${renamed}\n\n${changes}`;
+  });
+
+  return `## Changed views\n\n${entries.join("\n\n")}`;
+}
+
+function formatUserTraits(impact: UserTraitsImpact | null): string {
+  if (impact === null) {
+    return "";
+  }
+
+  const changes = [
+    ...impact.fields.map(
+      (field) =>
+        `- **${classificationLabel(field.classification)}:** ${field.summary}`,
+    ),
+    ...impact.properties.map(
+      (property) =>
+        `- **${classificationLabel(property.classification)}:** ${formatPropertyImpact(property)}`,
+    ),
+  ].join("\n");
+
+  return `## User-trait changes\n\nContract ${impact.change}.\n\n${changes}`;
+}
+
 function formatPropertySets(propertySets: readonly PropertySetImpact[]): string {
   if (propertySets.length === 0) {
     return "";
@@ -492,7 +809,12 @@ export function formatAnalyticsImpactReport(
 Base: \`${report.base}\`  
 Recommended version change: **${report.recommendedVersionBump}**`;
 
-  if (report.events.length === 0 && report.propertySets.length === 0) {
+  if (
+    report.events.length === 0 &&
+    report.views.length === 0 &&
+    report.userTraits === null &&
+    report.propertySets.length === 0
+  ) {
     return `${header}\n\nNo analytics contract changes found.`;
   }
 
@@ -502,6 +824,10 @@ Recommended version change: **${report.recommendedVersionBump}**`;
 - Events removed: ${report.summary.eventsRemoved}
 - Events changed: ${report.summary.eventsChanged}
 - Events deprecated: ${report.summary.eventsDeprecated}
+- Views added: ${report.summary.viewsAdded}
+- Views removed: ${report.summary.viewsRemoved}
+- Views changed: ${report.summary.viewsChanged}
+- User traits changed: ${report.summary.userTraitsChanged ? "yes" : "no"}
 - Property sets changed: ${report.summary.propertySetsChanged}
 - Events affected: ${report.summary.affectedEvents}`;
   const sections = [
@@ -510,6 +836,10 @@ Recommended version change: **${report.recommendedVersionBump}**`;
     formatEventList(report.events, "added"),
     formatEventList(report.events, "removed"),
     formatChangedEvents(report.events),
+    formatViewList(report.views, "added"),
+    formatViewList(report.views, "removed"),
+    formatChangedViews(report.views),
+    formatUserTraits(report.userTraits),
     formatPropertySets(report.propertySets),
   ].filter(Boolean);
 

@@ -20,7 +20,7 @@ type CommandOptions = Readonly<{
 
 const USAGE = `Usage: pnpm impact [--base <git-ref>] [--json]
 
-Reports event and property-set changes relative to a committed catalog.
+Reports event, view, user-trait, and property-set changes relative to a committed catalog.
 
 Options:
   --base <git-ref>  Compare with the catalog committed at this ref (default: HEAD)

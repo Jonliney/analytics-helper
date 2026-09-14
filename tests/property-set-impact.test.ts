@@ -173,6 +173,8 @@ test("accepts catalogs created before property sets and stable keys existed", ()
   });
 
   assert.deepEqual(earlierCatalog.propertySets, []);
+  assert.deepEqual(earlierCatalog.views, []);
+  assert.equal(earlierCatalog.userTraits, null);
   assert.equal(earlierCatalog.events[0]?.key, undefined);
   assert.deepEqual(earlierCatalog.events[0]?.propertySets, []);
 });
