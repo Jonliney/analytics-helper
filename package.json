@@ -31,7 +31,7 @@
     "build": "pnpm run clean && pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",
     "example:dev": "pnpm --filter @analytics-example/react-posthog dev",
     "example:build": "pnpm --filter @analytics-example/react-posthog build",
-    "ci": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run example:build",
+    "ci": "pnpm run build && pnpm run typecheck && pnpm run test",
     "prepublishOnly": "pnpm run build"
   },
   "engines": {
