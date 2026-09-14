@@ -29,7 +29,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "pnpm run clean && pnpm run validate && pnpm run generate && tsc -p tsconfig.build.json",
-    "ci": "pnpm run build && pnpm run typecheck && pnpm run test",
+    "example:dev": "pnpm --filter @analytics-example/react-posthog dev",
+    "example:build": "pnpm --filter @analytics-example/react-posthog build",
+    "ci": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run example:build",
     "prepublishOnly": "pnpm run build"
   },
   "engines": {

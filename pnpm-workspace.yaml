@@ -1,2 +1,10 @@
+packages:
+  - examples/*
+
 allowBuilds:
+  core-js: true
   esbuild: true
+
+overrides:
+  '@posthog/core': 1.53.2
+  '@posthog/types': 1.411.1

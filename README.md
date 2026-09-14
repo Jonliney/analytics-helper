@@ -155,6 +155,11 @@ properties fail TypeScript checking and runtime validation. Use
 event strings remain supported, but `eventNames` provides autocomplete and
 deprecation guidance.
 
+A runnable React, Vite, and PostHog integration is available in
+[`examples/react-posthog`](examples/react-posthog). Copy its `.env.example` to
+`.env`, add a PostHog project key, then run `pnpm build` and
+`pnpm example:dev` from the repository root.
+
 ## Publish privately to npm
 
 1. Change the package name in `package.json` to the company's npm scope, such as
