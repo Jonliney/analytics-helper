@@ -116,8 +116,14 @@ records when events were deprecated or removed.
 ```sh
 pnpm validate   # validate event JSON
 pnpm generate   # regenerate all contracts
+pnpm impact     # report property-set changes relative to HEAD
 pnpm run ci     # build, type-check, and run all tests
 ```
+
+Use `pnpm impact --base origin/main` to compare with another Git ref, or add
+`--json` to produce a machine-readable report. Impact reporting is
+informational: it recommends a semantic version change but does not reject
+contract changes.
 
 Commit definitions together with `event-definition.schema.json`,
 `property-set-definition.schema.json`, `src/generated/`, and `generated/`.

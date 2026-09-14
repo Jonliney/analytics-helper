@@ -8,6 +8,8 @@ import {
   type ResolvedEventIdentifier,
 } from "./event-identifiers.js";
 
+export const LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION = 1;
+
 function propertyToZod(property: PropertyDefinition): string {
   if (property.enum && !property.allowOtherValues) {
     return `z.enum([${property.enum.map((value) => JSON.stringify(value)).join(", ")}])`;
@@ -62,11 +64,13 @@ function commentLines(value: string, indentation = "  "): string {
 }
 
 function deprecationMessage(
-  event: Readonly<{ status: "active" }> | Readonly<{
-    status: "deprecated";
-    deprecatedSince: string;
-    replacement?: string;
-  }>,
+  event:
+    | Readonly<{ status: "active" }>
+    | Readonly<{
+        status: "deprecated";
+        deprecatedSince: string;
+        replacement?: string;
+      }>,
 ): string | undefined {
   if (event.status !== "deprecated") {
     return undefined;
@@ -123,23 +127,21 @@ ${deprecation ? `   * @deprecated ${deprecation}\n` : ""}   */
       const deprecation = deprecationMessage(event);
 
       return `${
-        deprecation
-          ? `  /** @deprecated ${deprecation} */\n`
-          : ""
+        deprecation ? `  /** @deprecated ${deprecation} */\n` : ""
       }  ${JSON.stringify(event.name)}: {
     description: ${JSON.stringify(event.description)},
 ${event.domain ? `    domain: ${JSON.stringify(event.domain)},\n` : ""}    key: ${JSON.stringify(event.key)},
 ${event.propertySets.length > 0 ? `    propertySets: ${JSON.stringify(event.propertySets)},\n` : ""}    status: ${JSON.stringify(event.status)},${
-      event.status === "deprecated"
-        ? `
+        event.status === "deprecated"
+          ? `
     deprecatedSince: ${JSON.stringify(event.deprecatedSince)},${
       event.replacement
         ? `
     replacement: ${JSON.stringify(event.replacement)},`
         : ""
     }`
-        : ""
-    }
+          : ""
+      }
   },`;
     })
     .join("\n");
@@ -182,7 +184,7 @@ export function renderLanguageNeutralCatalog(
 ): string {
   return `${JSON.stringify(
     {
-      schemaVersion: 4,
+      schemaVersion: LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION,
       propertySets,
       events,
     },
