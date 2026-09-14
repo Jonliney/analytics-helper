@@ -50,7 +50,9 @@ event or an array of related events.
 - Supported property types are `string`, `number`, and `boolean`.
 - Properties are required unless `"optional": true` is set.
 - String enums are strict by default.
-- Event-level `allowAdditionalProperties` permits undeclared properties. Omit if not required.
+- Events reject undeclared properties by default. For an exceptional event that
+  intentionally accepts them, add `"allowAdditionalProperties": true` beside
+  `"properties"` in the event definition.
 - Property-level `allowOtherValues` makes a string enum recommended rather than
   exhaustive. TypeScript editors still suggest the listed values while allowing
   other strings. Omit if not required.

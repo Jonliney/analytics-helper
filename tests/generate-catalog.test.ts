@@ -41,6 +41,25 @@ test("preserves suggestions for open string enums", () => {
   );
 });
 
+test("only generates a catch-all schema after an explicit opt-in", () => {
+  const event = events[0]!;
+  const output = renderTypeScriptCatalog([
+    { ...event, name: "Strict Event", key: "strictEvent" },
+    {
+      ...event,
+      name: "Flexible Event",
+      key: "flexibleEvent",
+      allowAdditionalProperties: true,
+    },
+  ]);
+
+  assert.match(output, /"Strict Event": z\.strictObject/);
+  assert.match(
+    output,
+    /"Flexible Event": z\.object\([\s\S]*?\)\.catchall\(z\.unknown\(\)\)/,
+  );
+});
+
 test("keeps purpose out of runtime TypeScript metadata", () => {
   const output = renderTypeScriptCatalog(events);
 

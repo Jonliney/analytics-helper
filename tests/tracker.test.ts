@@ -46,16 +46,14 @@ test("rejects undeclared properties at runtime", () => {
   );
 });
 
-test("allows additional properties for events that explicitly opt in", () => {
-  assert.deepEqual(
-    parseEvent("signup_started", {
-      method: "sso",
-      experiment_variant: "short-form",
-    }),
-    {
-      method: "sso",
-      experiment_variant: "short-form",
-    },
+test("open enums do not also permit undeclared properties", () => {
+  assert.throws(
+    () =>
+      parseEvent("signup_started", {
+        method: "sso",
+        experiment_variant: "short-form",
+      }),
+    /unrecognized key/i,
   );
 });
 

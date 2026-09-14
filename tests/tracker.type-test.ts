@@ -9,14 +9,12 @@ const track = createTracker(() => undefined);
 track(eventNames.auth.signupCompleted, { method: "google" });
 track(eventNames.auth.signupStarted, {
   method: "sso",
-  experiment_variant: "short-form",
 });
 
-const openEventProperties = {
+const startedProperties = {
   method: "email",
-  temporary_property: true,
 };
-track(eventNames.auth.signupStarted, openEventProperties);
+track(eventNames.auth.signupStarted, startedProperties);
 
 const temporaryMethod: string = "temporary-provider";
 track(eventNames.auth.signupStarted, { method: temporaryMethod });
@@ -27,8 +25,11 @@ track("missing_event", {});
 // @ts-expect-error method is required.
 track("Signup Completed", {});
 
-// @ts-expect-error Open events still enforce declared required properties.
+// @ts-expect-error Required properties remain enforced for open enums.
 track("signup_started", { experiment_variant: "short-form" });
+
+// @ts-expect-error Open enum values do not permit undeclared properties.
+track("signup_started", { method: "sso", experiment_variant: "short-form" });
 
 // @ts-expect-error enum values are generated as string literals.
 track("Signup Completed", { method: "password" });

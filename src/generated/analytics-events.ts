@@ -27,9 +27,9 @@ export const eventSchemas = {
   /**
    * User begins account registration
    */
-  "signup_started": z.object({
+  "signup_started": z.strictObject({
     "method": (z.string() as z.ZodType<"email" | "google" | "apple" | (string & {}), string>).describe("Authentication method selected for registration"),
-  }).catchall(z.unknown()),
+  }),
 } as const;
 
 export const eventDefinitions = {

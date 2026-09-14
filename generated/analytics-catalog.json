@@ -86,7 +86,7 @@
       "key": "signupStarted",
       "propertySets": [],
       "description": "User begins account registration",
-      "allowAdditionalProperties": true,
+      "allowAdditionalProperties": false,
       "properties": {
         "method": {
           "type": "string",
