@@ -5,6 +5,7 @@ import {
   createAnalytics,
   parseUserTraits,
   parseView,
+  type AnalyticsClientValidationFailure,
   viewNames,
 } from "../src/index.js";
 
@@ -101,6 +102,71 @@ test("rejects unknown or invalid views without calling the adapter", () => {
   assert.equal(calls, 0);
 });
 
+test("applies one invalid-data policy to track, identify, and view", () => {
+  const adapterCalls: string[] = [];
+  const failures: AnalyticsClientValidationFailure[] = [];
+  const analytics = createAnalytics(
+    {
+      track() {
+        adapterCalls.push("track");
+        return "tracked" as const;
+      },
+      identify() {
+        adapterCalls.push("identify");
+        return "identified" as const;
+      },
+      view() {
+        adapterCalls.push("view");
+        return "viewed" as const;
+      },
+      clearIdentity() {},
+    },
+    {
+      onInvalid(failure) {
+        failures.push(failure);
+        return "dropped" as const;
+      },
+    },
+  );
+  const unsafeTrack = analytics.track as unknown as (
+    event: string,
+    properties: unknown,
+  ) => string;
+  const unsafeIdentify = analytics.identify as unknown as (
+    userId: string,
+    traits: unknown,
+  ) => string;
+  const unsafeView = analytics.view as unknown as (
+    name: string,
+    properties: unknown,
+  ) => string;
+
+  assert.equal(unsafeTrack("Signup Completed", {}), "dropped");
+  assert.equal(unsafeIdentify("user-123", { unexpected: true }), "dropped");
+  assert.equal(unsafeView("Missing View", {}), "dropped");
+  assert.deepEqual(
+    failures.map((failure) => failure.operation),
+    ["track", "identify", "view"],
+  );
+  assert.deepEqual(adapterCalls, []);
+  assert.equal(failures[0]?.operation, "track");
+  assert.equal(
+    failures[0]?.operation === "track" ? failures[0].event : undefined,
+    "Signup Completed",
+  );
+  assert.equal(failures[1]?.operation, "identify");
+  assert.equal(
+    failures[1]?.operation === "identify" ? failures[1].userId : undefined,
+    "user-123",
+  );
+  assert.equal(failures[2]?.operation, "view");
+  assert.equal(
+    failures[2]?.operation === "view" ? failures[2].name : undefined,
+    "Missing View",
+  );
+  assert.ok(failures.every((failure) => failure.error instanceof Error));
+});
+
 test("exports standalone parsers for server boundaries", () => {
   assert.deepEqual(parseUserTraits({ plan: "enterprise" }), {
     plan: "enterprise",
@@ -110,17 +176,38 @@ test("exports standalone parsers for server boundaries", () => {
 
 test("does not treat provider failures as validation failures", () => {
   const providerError = new Error("provider unavailable");
-  const analytics = createAnalytics({
-    track() {},
-    identify() {
-      throw providerError;
+  let invalidHandlerCalled = false;
+  const analytics = createAnalytics(
+    {
+      track() {
+        throw providerError;
+      },
+      identify() {
+        throw providerError;
+      },
+      view() {
+        throw providerError;
+      },
+      clearIdentity() {},
     },
-    view() {},
-    clearIdentity() {},
-  });
+    {
+      onInvalid() {
+        invalidHandlerCalled = true;
+      },
+    },
+  );
 
   assert.throws(
     () => analytics.identify("user-123", {}),
     (error) => error === providerError,
   );
+  assert.throws(
+    () => analytics.track("Signup Completed", { method: "email" }),
+    (error) => error === providerError,
+  );
+  assert.throws(
+    () => analytics.view(viewNames.integrationExample, {}),
+    (error) => error === providerError,
+  );
+  assert.equal(invalidHandlerCalled, false);
 });

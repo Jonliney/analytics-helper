@@ -6,7 +6,11 @@ import {
   type AnalyticsViews,
   type UserTraits,
 } from "./generated/analytics-events.js";
-import { createTracker, type Tracker } from "./tracker.js";
+import {
+  createTracker,
+  type AnalyticsValidationFailure,
+  type Tracker,
+} from "./tracker.js";
 
 export type IdentifyFunction<Result = unknown> = (
   userId: string,
@@ -19,6 +23,32 @@ export type ViewFunction<Result = unknown> = (
 ) => Result;
 
 export type ClearIdentityFunction<Result = unknown> = () => Result;
+
+export type TrackValidationFailure = AnalyticsValidationFailure &
+  Readonly<{ operation: "track" }>;
+
+export type IdentifyValidationFailure = Readonly<{
+  operation: "identify";
+  userId: string;
+  traits: unknown;
+  error: Error;
+}>;
+
+export type ViewValidationFailure = Readonly<{
+  operation: "view";
+  name: string;
+  properties: unknown;
+  error: Error;
+}>;
+
+export type AnalyticsClientValidationFailure =
+  | TrackValidationFailure
+  | IdentifyValidationFailure
+  | ViewValidationFailure;
+
+export type AnalyticsClientOptions<InvalidResult = void> = Readonly<{
+  onInvalid: (failure: AnalyticsClientValidationFailure) => InvalidResult;
+}>;
 
 export type AnalyticsAdapter<
   TrackResult = unknown,
@@ -40,19 +70,20 @@ export type AnalyticsClient<
   IdentifyResult = unknown,
   ViewResult = unknown,
   ClearIdentityResult = unknown,
+  InvalidResult = never,
 > = Readonly<{
-  track: Tracker<TrackResult>;
+  track: Tracker<TrackResult | InvalidResult>;
   identify: <Traits extends UserTraits>(
     userId: string,
     traits: ContractProperties<UserTraits, Traits>,
-  ) => IdentifyResult;
+  ) => IdentifyResult | InvalidResult;
   view: <
     Name extends AnalyticsViewName,
     Properties extends AnalyticsViews[Name],
   >(
     name: Name,
     properties: ContractProperties<AnalyticsViews[Name], Properties>,
-  ) => ViewResult;
+  ) => ViewResult | InvalidResult;
   clearIdentity: () => ClearIdentityResult;
 }>;
 
@@ -77,6 +108,10 @@ export function parseView<Name extends AnalyticsViewName>(
   return viewSchemas[name].parse(properties) as AnalyticsViews[Name];
 }
 
+function asValidationError(error: unknown, message: string): Error {
+  return error instanceof Error ? error : new Error(message, { cause: error });
+}
+
 export function createAnalytics<
   TrackResult,
   IdentifyResult,
@@ -94,28 +129,117 @@ export function createAnalytics<
   IdentifyResult,
   ViewResult,
   ClearIdentityResult
+>;
+export function createAnalytics<
+  TrackResult,
+  IdentifyResult,
+  ViewResult,
+  ClearIdentityResult,
+  InvalidResult,
+>(
+  adapter: AnalyticsAdapter<
+    TrackResult,
+    IdentifyResult,
+    ViewResult,
+    ClearIdentityResult
+  >,
+  options: AnalyticsClientOptions<InvalidResult>,
+): AnalyticsClient<
+  TrackResult,
+  IdentifyResult,
+  ViewResult,
+  ClearIdentityResult,
+  InvalidResult
+>;
+export function createAnalytics<
+  TrackResult,
+  IdentifyResult,
+  ViewResult,
+  ClearIdentityResult,
+  InvalidResult,
+>(
+  adapter: AnalyticsAdapter<
+    TrackResult,
+    IdentifyResult,
+    ViewResult,
+    ClearIdentityResult
+  >,
+  options?: AnalyticsClientOptions<InvalidResult>,
+): AnalyticsClient<
+  TrackResult,
+  IdentifyResult,
+  ViewResult,
+  ClearIdentityResult,
+  InvalidResult
 > {
+  function onInvalid(
+    failure: AnalyticsClientValidationFailure,
+  ): InvalidResult {
+    if (!options) {
+      throw failure.error;
+    }
+
+    return options.onInvalid(failure);
+  }
+
+  const track: Tracker<TrackResult | InvalidResult> = options
+    ? createTracker(
+        (event, properties) => adapter.track(event, properties),
+        {
+          onInvalid(failure) {
+            return onInvalid({ operation: "track", ...failure });
+          },
+        },
+      )
+    : createTracker((event, properties) =>
+        adapter.track(event, properties),
+      );
+
   return {
-    track: createTracker((event, properties) =>
-      adapter.track(event, properties),
-    ),
+    track,
 
     identify(userId, traits) {
-      if (!userId.trim()) {
-        throw new Error("Analytics user ID cannot be empty");
+      let parsedTraits: UserTraits;
+
+      try {
+        if (!userId.trim()) {
+          throw new Error("Analytics user ID cannot be empty");
+        }
+
+        parsedTraits = parseUserTraits(traits);
+      } catch (error) {
+        return onInvalid({
+          operation: "identify",
+          userId,
+          traits,
+          error: asValidationError(
+            error,
+            "Analytics user-trait validation failed",
+          ),
+        });
       }
 
       return adapter.identify(
         userId,
-        parseUserTraits(traits) as Record<string, unknown>,
+        parsedTraits as Record<string, unknown>,
       );
     },
 
     view(name, properties) {
-      return adapter.view(
-        name,
-        parseView(name, properties) as Record<string, unknown>,
-      );
+      let parsedProperties: AnalyticsViews[typeof name];
+
+      try {
+        parsedProperties = parseView(name, properties);
+      } catch (error) {
+        return onInvalid({
+          operation: "view",
+          name,
+          properties,
+          error: asValidationError(error, "Analytics view validation failed"),
+        });
+      }
+
+      return adapter.view(name, parsedProperties as Record<string, unknown>);
     },
 
     clearIdentity: () => adapter.clearIdentity(),

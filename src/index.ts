@@ -15,8 +15,13 @@ export {
   parseView,
   type AnalyticsAdapter,
   type AnalyticsClient,
+  type AnalyticsClientOptions,
+  type AnalyticsClientValidationFailure,
   type ClearIdentityFunction,
+  type IdentifyValidationFailure,
   type IdentifyFunction,
+  type TrackValidationFailure,
+  type ViewValidationFailure,
   type ViewFunction,
 } from "./analytics.js";
 

@@ -195,6 +195,21 @@ that knows about PostHog or another provider. Events, user traits, and views are
 type checked and runtime validated before reaching it. `createTracker` remains
 available when only event capture is required.
 
+Validation errors throw by default. Applications that prefer to report and drop
+invalid analytics can configure one policy for every operation:
+
+```ts
+const analytics = createAnalytics(adapter, {
+  onInvalid(failure) {
+    reportAnalyticsError(failure);
+    return undefined;
+  },
+});
+```
+
+The failure's `operation` is `track`, `identify`, or `view`. Errors thrown by the
+analytics provider are not treated as validation failures.
+
 A runnable React, Vite, and PostHog integration is available in
 [`examples/react-posthog`](examples/react-posthog). Copy its `.env.example` to
 `.env`, add a PostHog project key, then run `pnpm build` and

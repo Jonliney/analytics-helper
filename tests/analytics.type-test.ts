@@ -36,6 +36,55 @@ void identifyResult;
 void viewResult;
 void clearResult;
 
+const resilientAnalytics = createAnalytics(
+  {
+    track() {
+      return "tracked" as const;
+    },
+    identify() {
+      return "identified" as const;
+    },
+    view() {
+      return "viewed" as const;
+    },
+    clearIdentity() {
+      return "cleared" as const;
+    },
+  },
+  {
+    onInvalid(failure) {
+      if (failure.operation === "track") {
+        const event: string = failure.event;
+        void event;
+      } else if (failure.operation === "identify") {
+        const userId: string = failure.userId;
+        void userId;
+      } else {
+        const viewName: string = failure.name;
+        void viewName;
+      }
+
+      return "dropped" as const;
+    },
+  },
+);
+
+const resilientTrackResult: "tracked" | "dropped" =
+  resilientAnalytics.track(eventNames.auth.signupCompleted, {
+    method: "email",
+  });
+const resilientIdentifyResult: "identified" | "dropped" =
+  resilientAnalytics.identify("user-123", {});
+const resilientViewResult: "viewed" | "dropped" = resilientAnalytics.view(
+  viewNames.integrationExample,
+  {},
+);
+const resilientClearResult: "cleared" = resilientAnalytics.clearIdentity();
+void resilientTrackResult;
+void resilientIdentifyResult;
+void resilientViewResult;
+void resilientClearResult;
+
 analytics.identify("user-123", {});
 analytics.view(viewNames.integrationExample, {});
 
