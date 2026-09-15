@@ -17,10 +17,10 @@ test("builds every artifact through one interface", (t) => {
   assert.equal(result.viewCount, 0);
   assert.equal(result.hasUserTraits, false);
   assert.deepEqual(result.artifacts, [
-    "schemas/event-definition.schema.json",
-    "schemas/property-set-definition.schema.json",
-    "schemas/user-traits-definition.schema.json",
-    "schemas/view-definition.schema.json",
+    "generated/schemas/event-definition.schema.json",
+    "generated/schemas/property-set-definition.schema.json",
+    "generated/schemas/user-traits-definition.schema.json",
+    "generated/schemas/view-definition.schema.json",
     "src/generated/analytics-events.ts",
     "generated/analytics-catalog.json",
   ]);
@@ -45,23 +45,37 @@ test("renders all targets before writing any artifact", (t) => {
   assert.equal(fs.existsSync(path.join(root, "src/generated")), false);
   assert.equal(fs.existsSync(path.join(root, "generated")), false);
   assert.equal(
-    fs.existsSync(path.join(root, "schemas", "event-definition.schema.json")),
-    false,
-  );
-  assert.equal(
     fs.existsSync(
-      path.join(root, "schemas", "property-set-definition.schema.json"),
+      path.join(root, "generated", "schemas", "event-definition.schema.json"),
     ),
     false,
   );
   assert.equal(
     fs.existsSync(
-      path.join(root, "schemas", "user-traits-definition.schema.json"),
+      path.join(
+        root,
+        "generated",
+        "schemas",
+        "property-set-definition.schema.json",
+      ),
     ),
     false,
   );
   assert.equal(
-    fs.existsSync(path.join(root, "schemas", "view-definition.schema.json")),
+    fs.existsSync(
+      path.join(
+        root,
+        "generated",
+        "schemas",
+        "user-traits-definition.schema.json",
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(root, "generated", "schemas", "view-definition.schema.json"),
+    ),
     false,
   );
 });

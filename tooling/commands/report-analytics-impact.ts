@@ -1,16 +1,16 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-import { loadEventCatalog } from "../tooling/event-catalog.js";
-import { LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION } from "../tooling/generate-catalog.js";
+import { loadEventCatalog } from "../event-catalog.js";
+import { LANGUAGE_NEUTRAL_CATALOG_SCHEMA_VERSION } from "../generate-catalog.js";
 import {
   compareAnalyticsImpact,
   formatAnalyticsImpactReport,
-} from "../tooling/analytics-impact.js";
+} from "../analytics-impact.js";
 import {
   impactCatalogFromEventCatalog,
   parseImpactCatalog,
-} from "../tooling/property-set-impact.js";
+} from "../property-set-impact.js";
 
 type CommandOptions = Readonly<{
   base: string;

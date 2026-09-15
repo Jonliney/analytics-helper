@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseCommandOptions } from "../scripts/report-analytics-impact.js";
+import { parseCommandOptions } from "../tooling/commands/report-analytics-impact.js";
 import {
   comparePropertySetImpact,
   formatPropertySetImpactReport,

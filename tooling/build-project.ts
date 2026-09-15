@@ -20,19 +20,19 @@ type OutputTarget = Readonly<{
 
 const OUTPUT_TARGETS: readonly OutputTarget[] = [
   {
-    relativePath: "schemas/event-definition.schema.json",
+    relativePath: "generated/schemas/event-definition.schema.json",
     render: () => renderEventDefinitionJsonSchema(),
   },
   {
-    relativePath: "schemas/property-set-definition.schema.json",
+    relativePath: "generated/schemas/property-set-definition.schema.json",
     render: () => renderPropertySetDefinitionJsonSchema(),
   },
   {
-    relativePath: "schemas/user-traits-definition.schema.json",
+    relativePath: "generated/schemas/user-traits-definition.schema.json",
     render: () => renderUserTraitsDefinitionJsonSchema(),
   },
   {
-    relativePath: "schemas/view-definition.schema.json",
+    relativePath: "generated/schemas/view-definition.schema.json",
     render: () => renderViewDefinitionJsonSchema(),
   },
   {

@@ -121,7 +121,12 @@ test("normalizes deprecated lifecycle metadata", () => {
 test("keeps the checked-in JSON Schema generated from the authoring schema", () => {
   const generatedSchema = renderEventDefinitionJsonSchema();
   const checkedInSchema = fs.readFileSync(
-    path.join(repositoryRoot, "schemas", "event-definition.schema.json"),
+    path.join(
+      repositoryRoot,
+      "generated",
+      "schemas",
+      "event-definition.schema.json",
+    ),
     "utf8",
   );
 
@@ -139,6 +144,7 @@ test("keeps the property set JSON Schema generated from the authoring schema", (
   const checkedInSchema = fs.readFileSync(
     path.join(
       repositoryRoot,
+      "generated",
       "schemas",
       "property-set-definition.schema.json",
     ),
@@ -154,7 +160,12 @@ test("keeps the property set JSON Schema generated from the authoring schema", (
 test("keeps the view JSON Schema generated from the authoring schema", () => {
   const generatedSchema = renderViewDefinitionJsonSchema();
   const checkedInSchema = fs.readFileSync(
-    path.join(repositoryRoot, "schemas", "view-definition.schema.json"),
+    path.join(
+      repositoryRoot,
+      "generated",
+      "schemas",
+      "view-definition.schema.json",
+    ),
     "utf8",
   );
 
@@ -168,6 +179,7 @@ test("keeps the user-trait JSON Schema generated from the authoring schema", () 
   const checkedInSchema = fs.readFileSync(
     path.join(
       repositoryRoot,
+      "generated",
       "schemas",
       "user-traits-definition.schema.json",
     ),

@@ -59,10 +59,10 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: >-
           tar -czf "analytics-contracts-${VERSION#v}.tar.gz"
-          schemas/event-definition.schema.json
-          schemas/property-set-definition.schema.json
-          schemas/user-traits-definition.schema.json
-          schemas/view-definition.schema.json
+          generated/schemas/event-definition.schema.json
+          generated/schemas/property-set-definition.schema.json
+          generated/schemas/user-traits-definition.schema.json
+          generated/schemas/view-definition.schema.json
           generated/analytics-catalog.json
 
       - name: Create GitHub release

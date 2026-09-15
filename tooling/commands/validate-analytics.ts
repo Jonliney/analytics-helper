@@ -1,4 +1,4 @@
-import { loadEventCatalog } from "../tooling/event-catalog.js";
+import { loadEventCatalog } from "../event-catalog.js";
 
 try {
   const catalog = loadEventCatalog(process.cwd());

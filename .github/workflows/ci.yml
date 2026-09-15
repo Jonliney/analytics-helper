@@ -23,4 +23,4 @@ jobs:
       - name: Ensure generated artifacts are committed
         run: >-
           git diff --exit-code --
-          schemas src/generated generated
+          src/generated generated
