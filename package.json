@@ -12,18 +12,15 @@
       "import": "./dist/index.js"
     },
     "./catalog.json": "./generated/analytics-catalog.json",
-    "./event-definition.schema.json": "./event-definition.schema.json",
-    "./property-set-definition.schema.json": "./property-set-definition.schema.json",
-    "./user-traits-definition.schema.json": "./user-traits-definition.schema.json",
-    "./view-definition.schema.json": "./view-definition.schema.json"
+    "./event-definition.schema.json": "./schemas/event-definition.schema.json",
+    "./property-set-definition.schema.json": "./schemas/property-set-definition.schema.json",
+    "./user-traits-definition.schema.json": "./schemas/user-traits-definition.schema.json",
+    "./view-definition.schema.json": "./schemas/view-definition.schema.json"
   },
   "files": [
     "dist",
     "generated/analytics-catalog.json",
-    "event-definition.schema.json",
-    "property-set-definition.schema.json",
-    "user-traits-definition.schema.json",
-    "view-definition.schema.json"
+    "schemas"
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",

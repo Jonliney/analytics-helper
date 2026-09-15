@@ -167,8 +167,8 @@ default Markdown output can be copied into a ticket or saved with
 machine-readable report. Impact reporting is informational: it recommends a
 semantic version change but does not reject contract changes.
 
-Commit definitions together with the generated `*-definition.schema.json`
-files, `src/generated/`, and `generated/`.
+Commit definitions together with the generated `schemas/`, `src/generated/`,
+and `generated/` folders. Do not edit generated files directly.
 `dist/` and `node_modules/` are local-only and must not be committed.
 
 ## TypeScript usage
